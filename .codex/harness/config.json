@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "runtime_directory": ".codex/harness/runtime",
+  "logs_directory": ".codex/harness/logs",
+  "automatic_agent_execution": false,
+  "roles": {
+    "plan": "planner",
+    "implementation": "implementer",
+    "review": "reviewer"
+  },
+  "schemas": {
+    "plan": ".codex/harness/schemas/plan.schema.json",
+    "implementation": ".codex/harness/schemas/implementation.schema.json",
+    "review": ".codex/harness/schemas/review.schema.json",
+    "state": ".codex/harness/schemas/state.schema.json"
+  },
+  "verification_commands": {
+    "test:harness": { "executable": "npm", "args": ["run", "test:harness"] },
+    "test:agent": { "executable": "npm", "args": ["run", "test:agent"] },
+    "lint": { "executable": "npm", "args": ["run", "lint"] },
+    "typecheck": { "executable": "npm", "args": ["run", "typecheck"] },
+    "build": { "executable": "npm", "args": ["run", "build"] }
+  },
+  "output_contract": ["status", "summary", "next_actions", "artifacts"]
+}

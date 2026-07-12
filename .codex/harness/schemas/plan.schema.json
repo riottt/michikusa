@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://michikusa.local/schemas/plan.schema.json",
+  "title": "MICHIKUSA harness plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "role", "actor_id", "task_slug", "iteration", "status", "summary", "steps", "risks", "acceptance_criteria"],
+  "properties": {
+    "version": { "const": 1 },
+    "role": { "const": "planner" },
+    "actor_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$" },
+    "task_slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 80 },
+    "iteration": { "type": "integer", "minimum": 1 },
+    "status": { "const": "ready" },
+    "summary": { "type": "string", "minLength": 1 },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "description", "verification"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 },
+          "verification": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "risks": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "acceptance_criteria": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+  }
+}

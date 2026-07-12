@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "role": "planner",
+  "actor_id": "planner-one",
+  "task_slug": "fixture-task",
+  "iteration": 1,
+  "status": "ready",
+  "summary": "Implement the smallest safe map interaction change.",
+  "steps": [
+    { "id": "test", "description": "Add a regression test", "verification": "Test fails before implementation" },
+    { "id": "implement", "description": "Implement the behavior", "verification": "Focused test passes" }
+  ],
+  "risks": ["Map provider behavior may vary"],
+  "acceptance_criteria": ["Focused tests pass"]
+}

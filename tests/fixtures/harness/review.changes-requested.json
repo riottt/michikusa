@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "role": "reviewer",
+  "actor_id": "reviewer-one",
+  "task_slug": "fixture-task",
+  "iteration": 1,
+  "status": "changes_requested",
+  "summary": "One behavior needs correction.",
+  "findings": [
+    { "severity": "high", "summary": "Missing boundary validation", "recommendation": "Add the missing validation and test" }
+  ],
+  "verification": ["Reviewed the diff and focused tests"],
+  "next_actions": ["Return to implementation"]
+}

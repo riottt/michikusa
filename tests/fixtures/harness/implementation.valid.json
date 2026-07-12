@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "role": "implementer",
+  "actor_id": "implementer-one",
+  "task_slug": "fixture-task",
+  "iteration": 1,
+  "status": "success",
+  "summary": "Implemented and verified the planned change.",
+  "changes": ["Added regression coverage", "Implemented the scoped behavior"],
+  "verification": [],
+  "artifacts": ["src/example.ts", "tests/example.test.ts"]
+}

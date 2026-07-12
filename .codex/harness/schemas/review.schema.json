@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://michikusa.local/schemas/review.schema.json",
+  "title": "MICHIKUSA harness review result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "role", "actor_id", "task_slug", "iteration", "status", "summary", "findings", "verification", "next_actions"],
+  "properties": {
+    "version": { "const": 1 },
+    "role": { "const": "reviewer" },
+    "actor_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$" },
+    "task_slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 80 },
+    "iteration": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["approved", "changes_requested"] },
+    "summary": { "type": "string", "minLength": 1 },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["severity", "summary", "recommendation"],
+        "properties": {
+          "severity": { "enum": ["critical", "high", "medium", "low"] },
+          "summary": { "type": "string", "minLength": 1 },
+          "recommendation": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "verification": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "next_actions": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  }
+}

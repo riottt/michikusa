@@ -1,0 +1,20 @@
+#:schema https://developers.openai.com/codex/config-schema.json
+
+[features]
+multi_agent = true
+
+[agents]
+max_threads = 4
+max_depth = 1
+
+[agents.planner]
+description = "Read-only planner that converts a request and repository evidence into an executable, verifiable plan."
+config_file = "agents/planner.toml"
+
+[agents.implementer]
+description = "Implementation owner that follows the ready plan with TDD and records verification evidence."
+config_file = "agents/implementer.toml"
+
+[agents.reviewer]
+description = "Independent read-only reviewer that gates completion on correctness, security, tests, and scope."
+config_file = "agents/reviewer.toml"
