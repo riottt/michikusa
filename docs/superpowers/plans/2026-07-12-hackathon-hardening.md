@@ -303,7 +303,8 @@ git fetch origin --prune
 
 ```bash
 gcloud projects create michikusa-hackathon-20260712 --name=MICHIKUSA
-gcloud billing projects link michikusa-hackathon-20260712 --billing-account=01A5B8-A29F27-C4D055
+BILLING_ACCOUNT_ID="$(gcloud billing accounts list --filter='open=true' --limit=1 --format='value(name.basename())')"
+gcloud billing projects link michikusa-hackathon-20260712 --billing-account="$BILLING_ACCOUNT_ID"
 ```
 
 - [ ] **Step 4: Create restricted API keys and required secrets**
