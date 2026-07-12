@@ -88,10 +88,16 @@ const mascotMotion = await mascot.locator("img").evaluate((image) => getComputed
 if (!mascotMotion.includes("michiWalk")) {
   throw new Error(`Mascot walk animation is not active: ${mascotMotion}`);
 }
+await visibleText("ミチが考え中");
 await page.waitForTimeout(350);
 await shot("02-agent-planning");
 
 await visibleText("この道草で出発", 45_000);
+await visibleText("おまたせ！きょうの予定、立てたよ。");
+const resultMascotMotion = await page.getByTestId("michi-mascot").locator("img").evaluate((image) => getComputedStyle(image).animationName);
+if (!resultMascotMotion.includes("michiCelebrate")) {
+  throw new Error(`Mascot celebration animation is not active: ${resultMascotMotion}`);
+}
 await assertProductCopy();
 await shot("03-route-ready");
 

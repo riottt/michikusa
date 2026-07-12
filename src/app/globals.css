@@ -499,11 +499,11 @@
     left: 50%;
     bottom: max(34px, calc(env(safe-area-inset-bottom) + 22px));
     display: flex;
-    align-items: center;
-    gap: 15px;
+    align-items: flex-start;
+    gap: 12px;
     width: min(calc(100% - 32px), 410px);
-    min-height: 94px;
-    padding: 14px 17px;
+    min-height: 112px;
+    padding: 13px 15px 12px;
     border: 1px solid rgba(255,255,255,.9);
     border-radius: 27px;
     background: rgba(255,255,255,.87);
@@ -513,15 +513,12 @@
     animation: panelUp 450ms var(--ease) both;
   }
   .agent-working > div:last-child { min-width: 0; }
-  .agent-working small { display: block; color: #8b71e9; font-size: 8px; font-weight: 800; letter-spacing: .14em; }
-  .agent-working strong { display: block; margin-top: 4px; font-size: 14px; line-height: 1.35; }
-  .agent-working p { overflow: hidden; margin: 3px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
 
   .michi-mascot {
     position: relative;
-    flex: 0 0 66px;
-    width: 66px;
-    height: 66px;
+    flex: 0 0 72px;
+    width: 72px;
+    height: 72px;
     isolation: isolate;
   }
   .michi-mascot__halo {
@@ -532,6 +529,18 @@
     background: radial-gradient(circle, rgba(255,255,255,.96) 0 32%, rgba(222,212,255,.48) 54%, rgba(255,206,222,.08) 72%, transparent 74%);
     animation: michiHalo 1.45s ease-out infinite;
   }
+  .michi-mascot__orbit {
+    position: absolute;
+    z-index: 1;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--purple);
+    box-shadow: 0 0 0 4px rgba(169,146,255,.12);
+    animation: michiOrbit 1.8s linear infinite;
+  }
+  .michi-mascot__orbit--one { top: 7px; left: 11px; }
+  .michi-mascot__orbit--two { right: 7px; bottom: 13px; width: 7px; height: 7px; background: var(--pink); box-shadow: 0 0 0 4px rgba(255,134,172,.13); animation-delay: -.9s; }
   .michi-mascot__image {
     position: absolute;
     z-index: 2;
@@ -554,6 +563,82 @@
   }
   .michi-mascot__trail--one { bottom: 10px; left: 5px; background: rgba(255,134,172,.58); }
   .michi-mascot__trail--two { bottom: 16px; left: 0; width: 7px; height: 7px; background: rgba(99,207,164,.66); animation-delay: .54s; }
+  .michi-mascot__spark {
+    position: absolute;
+    z-index: 3;
+    width: 8px;
+    height: 8px;
+    border-radius: 3px;
+    background: var(--orange);
+    opacity: 0;
+    transform: rotate(15deg);
+  }
+  .michi-mascot__spark--one { top: 4px; right: 8px; }
+  .michi-mascot__spark--two { bottom: 4px; right: 1px; width: 6px; height: 6px; background: var(--green); }
+  .michi-mascot__spark--three { top: 20px; left: -2px; width: 5px; height: 5px; background: var(--pink); }
+  .michi-mascot--celebrate .michi-mascot__image { animation: michiCelebrate 1.45s var(--ease) infinite; }
+  .michi-mascot--celebrate .michi-mascot__halo { animation-name: michiCelebrateHalo; }
+  .michi-mascot--celebrate .michi-mascot__trail { animation-name: michiCelebrateTrail; }
+  .michi-mascot--celebrate .michi-mascot__spark { animation: michiSpark 1.25s ease-out infinite; }
+  .michi-mascot--celebrate .michi-mascot__spark--two { animation-delay: .32s; }
+  .michi-mascot--celebrate .michi-mascot__spark--three { animation-delay: .63s; }
+
+  .michi-speech {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    padding: 4px 26px 3px 1px;
+    animation: michiSpeechIn 360ms var(--ease) both;
+  }
+  .michi-speech::before {
+    content: "";
+    position: absolute;
+    top: 12px;
+    left: -18px;
+    width: 15px;
+    height: 15px;
+    border-radius: 4px 0 14px 0;
+    background: rgba(255,255,255,.87);
+    transform: rotate(-42deg);
+  }
+  .michi-speech small {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #8b71e9;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: .14em;
+  }
+  .michi-speech__pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--pink); animation: michiPulse 1s ease-in-out infinite; }
+  .michi-speech strong { display: block; margin-top: 4px; font-size: 14px; line-height: 1.35; }
+  .michi-speech p { overflow: hidden; margin: 3px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
+  .michi-speech__typing { position: absolute; right: 1px; bottom: 3px; display: inline-flex; align-items: center; gap: 3px; }
+  .michi-speech__typing i { width: 3px; height: 3px; border-radius: 50%; background: #a992ff; animation: michiTyping 1s ease-in-out infinite; }
+  .michi-speech__typing i:nth-child(2) { animation-delay: .16s; }
+  .michi-speech__typing i:nth-child(3) { animation-delay: .32s; }
+
+  .michi-result-popover {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: -7px -7px 15px;
+    padding: 10px 11px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.9);
+    border-radius: 22px;
+    background: linear-gradient(135deg, rgba(244,240,255,.95), rgba(255,243,247,.96));
+    box-shadow: inset 0 1px rgba(255,255,255,.82), 0 10px 24px rgba(132,104,171,.1);
+    animation: michiResultIn 520ms var(--ease) both;
+  }
+  .michi-result-popover::after { content: ""; position: absolute; z-index: 0; top: -28px; right: -14px; width: 90px; height: 90px; border-radius: 50%; background: rgba(255,255,255,.43); animation: michiGlow 2.4s ease-in-out infinite; }
+  .michi-result-popover .michi-mascot { z-index: 1; flex-basis: 65px; width: 65px; height: 65px; }
+  .michi-result-popover > div:last-child { position: relative; z-index: 1; flex: 1; min-width: 0; }
+  .michi-result-popover > div:last-child > span { display: block; color: #8b71e9; font-size: 8px; font-weight: 800; letter-spacing: .12em; }
+  .michi-result-popover strong { display: block; margin-top: 3px; font-size: 12px; line-height: 1.35; }
+  .michi-result-popover p { overflow: hidden; margin: 3px 0 0; color: var(--ink-soft); font-size: 9px; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
+  .michi-result-popover small { display: block; margin-top: 3px; color: #e17194; font-size: 8px; font-weight: 750; }
 
   .ready-head { display: flex; align-items: flex-start; gap: 12px; }
   .ready-head > div:first-child { flex: 1; min-width: 0; }
@@ -1003,6 +1088,16 @@
 @keyframes michiWalk { 0%,100% { transform: translate(0, 2px) rotate(-4deg) scale(.97, 1.03); } 28% { transform: translate(1px, -4px) rotate(3deg) scale(1.03, .97); } 52% { transform: translate(3px, 1px) rotate(5deg) scale(.98, 1.02); } 76% { transform: translate(0, -3px) rotate(-2deg) scale(1.02, .98); } }
 @keyframes michiHalo { 0% { opacity: .72; transform: scale(.72); } 72%,100% { opacity: 0; transform: scale(1.18); } }
 @keyframes michiTrail { 0% { opacity: 0; transform: translate(0, 0) scale(.3); } 32% { opacity: .9; } 100% { opacity: 0; transform: translate(-16px, 4px) scale(1.2); } }
+@keyframes michiOrbit { 0% { transform: rotate(0deg) translateX(24px) rotate(0deg) scale(.72); } 50% { transform: rotate(180deg) translateX(29px) rotate(-180deg) scale(1); } 100% { transform: rotate(360deg) translateX(24px) rotate(-360deg) scale(.72); } }
+@keyframes michiPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,134,172,.32); transform: scale(.82); } 50% { box-shadow: 0 0 0 5px rgba(255,134,172,0); transform: scale(1); } }
+@keyframes michiTyping { 0%,70%,100% { opacity: .26; transform: translateY(0); } 35% { opacity: 1; transform: translateY(-3px); } }
+@keyframes michiSpeechIn { from { opacity: 0; transform: translateX(7px) scale(.97); } to { opacity: 1; transform: translateX(0) scale(1); } }
+@keyframes michiCelebrate { 0%,100% { transform: translateY(2px) rotate(-4deg) scale(.98); } 18% { transform: translateY(-11px) rotate(5deg) scale(1.08); } 36% { transform: translateY(0) rotate(-2deg) scale(.98); } 54% { transform: translateY(-7px) rotate(3deg) scale(1.04); } 72% { transform: translateY(1px) rotate(-3deg) scale(1); } }
+@keyframes michiCelebrateHalo { 0% { opacity: .76; transform: scale(.58); } 58% { opacity: .2; transform: scale(1.35); } 100% { opacity: 0; transform: scale(1.46); } }
+@keyframes michiCelebrateTrail { 0% { opacity: 0; transform: translate(0, 0) scale(.35); } 32% { opacity: .8; } 100% { opacity: 0; transform: translate(-12px, -10px) scale(1.28); } }
+@keyframes michiSpark { 0% { opacity: 0; transform: translate(0, 5px) rotate(0deg) scale(.45); } 28% { opacity: 1; } 100% { opacity: 0; transform: translate(8px, -18px) rotate(130deg) scale(1.05); } }
+@keyframes michiResultIn { from { opacity: 0; transform: translateY(14px) scale(.96); } 65% { opacity: 1; transform: translateY(-2px) scale(1.015); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes michiGlow { 0%,100% { opacity: .38; transform: scale(.9); } 50% { opacity: .72; transform: scale(1.12); } }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) {

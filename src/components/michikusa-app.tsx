@@ -180,10 +180,12 @@ function RouteBadge({ onClick, active }: { onClick: () => void; active: boolean 
   );
 }
 
-function MichiMascot() {
+function MichiMascot({ mode = "thinking" }: { mode?: "thinking" | "celebrate" }) {
   return (
-    <div className="michi-mascot" data-testid="michi-mascot" aria-hidden="true">
+    <div className={`michi-mascot michi-mascot--${mode}`} data-testid="michi-mascot" aria-hidden="true">
       <span className="michi-mascot__halo" />
+      <span className="michi-mascot__orbit michi-mascot__orbit--one" />
+      <span className="michi-mascot__orbit michi-mascot__orbit--two" />
       <span className="michi-mascot__trail michi-mascot__trail--one" />
       <span className="michi-mascot__trail michi-mascot__trail--two" />
       <Image
@@ -194,6 +196,9 @@ function MichiMascot() {
         height={512}
         unoptimized
       />
+      <span className="michi-mascot__spark michi-mascot__spark--one" />
+      <span className="michi-mascot__spark michi-mascot__spark--two" />
+      <span className="michi-mascot__spark michi-mascot__spark--three" />
     </div>
   );
 }
@@ -225,6 +230,28 @@ export function MichikusaApp() {
 
   const currentSpot = plan?.stops[currentSpotIndex] ?? null;
   const latestTrace = traces.at(-1);
+  const planningSpeech = useMemo(() => {
+    if (pins.length > 0) {
+      return {
+        title: `寄り道を${pins.length}つにつないでるよ`,
+        detail: "帰る時間まで、あと少しだけ整えるね。"
+      };
+    }
+    if (candidates.length > 0) {
+      return {
+        title: `近くで${candidates.length}か所、見つけたよ`,
+        detail: "寄りやすい順番を比べてるところ。"
+      };
+    }
+    return {
+      title: latestTrace?.label ?? "いまの予定を見てるよ",
+      detail: latestTrace?.message ?? "時間と場所を並行して調べてるところ。"
+    };
+  }, [candidates.length, latestTrace?.label, latestTrace?.message, pins.length]);
+  const routeSummary = useMemo(() => {
+    if (!plan) return "";
+    return plan.stops.slice(0, 3).map((stop) => stop.name).join(" → ");
+  }, [plan]);
 
   useEffect(() => {
     Promise.all([
@@ -553,11 +580,12 @@ export function MichikusaApp() {
 
       {phase === "planning" && (
         <section className="agent-working" aria-live="polite">
-          <MichiMascot />
-          <div>
-            <small>ルートを考えています</small>
-            <strong>{latestTrace?.label ?? "いまの予定を見ています"}</strong>
-            <p>{latestTrace?.message ?? "時間と場所を並行して調べています。"}</p>
+          <MichiMascot mode="thinking" />
+          <div className="michi-speech" key={`${latestTrace?.agent ?? "start"}-${candidates.length}-${pins.length}`}>
+            <small><span className="michi-speech__pulse" />ミチが考え中</small>
+            <strong>{planningSpeech.title}</strong>
+            <p>{planningSpeech.detail}</p>
+            <span className="michi-speech__typing" aria-hidden="true"><i /><i /><i /></span>
           </div>
         </section>
       )}
@@ -591,6 +619,15 @@ export function MichikusaApp() {
 
       {phase === "ready" && plan && (
         <section className="bottom-panel bottom-panel--ready">
+          <div className="michi-result-popover" role="status" aria-live="polite">
+            <MichiMascot mode="celebrate" />
+            <div>
+              <span>ミチからの提案</span>
+              <strong>おまたせ！きょうの予定、立てたよ。</strong>
+              <p>{routeSummary || "この順番で寄っていこう。"}</p>
+              <small>この順番でどう？</small>
+            </div>
+          </div>
           <div className="ready-head">
             <div>
               <span className="eyebrow"><Route size={14} /> TODAY&apos;S MICHIKUSA</span>
