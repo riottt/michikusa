@@ -9,12 +9,14 @@ export async function GET() {
   try {
     await ensureSchema();
     const response = await fetchAgent("/health", { method: "GET" });
-    const agent = response.ok ? await response.json() : { status: "unavailable" };
+    if (!response.ok) {
+      console.error("Agent health check failed", { status: response.status });
+      return NextResponse.json({ status: "degraded", error: "agent_unavailable" }, { status: 503 });
+    }
+    const agent = await response.json();
     return NextResponse.json({ status: "ok", web: "ok", database: "ok", agent });
   } catch (error) {
-    return NextResponse.json(
-      { status: "degraded", error: error instanceof Error ? error.message : "unknown error" },
-      { status: 503 }
-    );
+    console.error("Health check failed", { errorType: error instanceof Error ? error.name : "unknown" });
+    return NextResponse.json({ status: "degraded", error: "service_unavailable" }, { status: 503 });
   }
 }

@@ -5,6 +5,7 @@ import { chromium } from "playwright-core";
 const base = process.env.E2E_BASE_URL || "http://127.0.0.1:3000";
 const executablePath = process.env.CHROMIUM_PATH || "/usr/bin/chromium";
 const output = process.env.E2E_OUTPUT_DIR || "artifacts";
+const desktop = process.env.E2E_LAYOUT === "desktop";
 await mkdir(output, { recursive: true });
 
 const browser = await chromium.launch({
@@ -13,10 +14,10 @@ const browser = await chromium.launch({
   args: ["--no-sandbox"]
 });
 const context = await browser.newContext({
-  viewport: { width: 390, height: 844 },
+  viewport: desktop ? { width: 1440, height: 900 } : { width: 390, height: 844 },
   deviceScaleFactor: 2,
-  isMobile: true,
-  hasTouch: true,
+  isMobile: !desktop,
+  hasTouch: !desktop,
   locale: "ja-JP",
   timezoneId: "Asia/Tokyo",
   geolocation: { latitude: 34.702485, longitude: 135.495951 },
@@ -44,6 +45,28 @@ async function visibleText(text, timeout = 30_000) {
 
 await page.goto(base, { waitUntil: "networkidle" });
 await visibleText("MICHIKUSA");
+
+if (desktop) {
+  const desktopLayout = await page.evaluate(() => {
+    const shell = document.querySelector(".app-shell");
+    const mapStage = document.querySelector(".map-stage");
+    const controlStage = document.querySelector(".control-stage");
+    return {
+      shellDisplay: shell ? getComputedStyle(shell).display : "missing",
+      columns: shell ? getComputedStyle(shell).gridTemplateColumns : "missing",
+      mapStage: Boolean(mapStage),
+      controlStage: Boolean(controlStage)
+    };
+  });
+  if (
+    desktopLayout.shellDisplay !== "grid" ||
+    desktopLayout.columns.split(" ").length < 2 ||
+    !desktopLayout.mapStage ||
+    !desktopLayout.controlStage
+  ) {
+    throw new Error(`Desktop layout is not active: ${JSON.stringify(desktopLayout)}`);
+  }
+}
 await shot("01-home");
 
 const start = page.getByRole("button", { name: /外に連れ出して|このまま道草する|今日を動かす|道草をつくる/ }).first();

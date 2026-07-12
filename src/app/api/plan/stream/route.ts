@@ -66,14 +66,12 @@ export async function POST(request: NextRequest): Promise<Response> {
       signal: request.signal
     });
   } catch (error) {
-    return Response.json(
-      { error: "ADKエージェントへ接続できませんでした。", detail: error instanceof Error ? error.message : "unknown" },
-      { status: 503 }
-    );
+    console.error("Agent connection failed", { errorType: error instanceof Error ? error.name : "unknown" });
+    return Response.json({ error: "エージェントへ接続できませんでした。" }, { status: 503 });
   }
   if (!upstream.ok || !upstream.body) {
-    const text = await upstream.text();
-    return Response.json({ error: `エージェントへ接続できませんでした: ${text.slice(0, 180)}` }, { status: 502 });
+    console.error("Agent response failed", { status: upstream.status });
+    return Response.json({ error: "エージェントが一時的に利用できません。" }, { status: 502 });
   }
 
   const encoder = new TextEncoder();
@@ -109,11 +107,12 @@ export async function POST(request: NextRequest): Promise<Response> {
           }
         }
       } catch (error) {
+        console.error("Agent stream failed", { errorType: error instanceof Error ? error.name : "unknown" });
         controller.enqueue(
           encoder.encode(
             `${JSON.stringify({
               type: "error",
-              message: error instanceof Error ? error.message : "stream error",
+              message: "ルートの生成が途中で止まりました。もう一度試してください。",
               recoverable: false
             })}\n`
           )

@@ -185,6 +185,7 @@ function GoogleMapCanvas({ current, candidates, pins, currentSpotIndex, complete
   const mapRef = useRef<google.maps.Map | null>(null);
   const overlays = useRef<Array<google.maps.MVCObject>>([]);
   const [failed, setFailed] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -208,12 +209,14 @@ function GoogleMapCanvas({ current, candidates, pins, currentSpotIndex, complete
                 { featureType: "road", elementType: "geometry", stylers: [{ color: "#ebe8ed" }] },
                 { featureType: "water", elementType: "geometry", stylers: [{ color: "#e0edf7" }] },
                 { featureType: "landscape.natural", stylers: [{ color: "#e8f4eb" }] }
-              ]
+            ]
         });
+        setMapReady(true);
       })
       .catch(() => setFailed(true));
     return () => {
       mounted = false;
+      setMapReady(false);
     };
   }, [current]);
 
@@ -285,7 +288,7 @@ function GoogleMapCanvas({ current, candidates, pins, currentSpotIndex, complete
     } else {
       map.panTo(current);
     }
-  }, [current, candidates, pins, currentSpotIndex, completedSpotIds]);
+  }, [mapReady, current, candidates, pins, currentSpotIndex, completedSpotIds]);
 
   if (failed) return <DemoMap current={current} candidates={candidates} pins={pins} currentSpotIndex={currentSpotIndex} planning={false} completedSpotIds={completedSpotIds} />;
   return <div ref={node} className="google-map" aria-label="Googleマップ" />;

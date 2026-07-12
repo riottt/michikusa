@@ -313,8 +313,10 @@ export function MichikusaApp() {
         body: JSON.stringify(body)
       });
       await readStream(response);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "道草を作れませんでした");
+    } catch {
+      // Upstream providers can include internal configuration details in errors.
+      // Keep the recovery action useful without exposing those details in the UI.
+      setError("いまは道草を作れませんでした。少し時間をおいて、もう一度試してください。");
       setPhase("idle");
     }
   }
@@ -491,15 +493,19 @@ export function MichikusaApp() {
 
   return (
     <main className="app-shell">
-      <MapCanvas
-        current={location}
-        candidates={candidates}
-        pins={pins}
-        plan={plan}
-        currentSpotIndex={currentSpotIndex}
-        planning={phase === "planning"}
-        completedSpotIds={completedSpotIds}
-      />
+      <div className="map-stage">
+        <MapCanvas
+          current={location}
+          candidates={candidates}
+          pins={pins}
+          plan={plan}
+          currentSpotIndex={currentSpotIndex}
+          planning={phase === "planning"}
+          completedSpotIds={completedSpotIds}
+        />
+      </div>
+
+      <section className="control-stage" aria-label="道草のコントロール">
 
       <header className="app-header">
         <div className="brand-lockup">
@@ -682,6 +688,7 @@ export function MichikusaApp() {
           )}
         </section>
       )}
+      </section>
 
       {phase === "complete" && plan && (
         <section className="completion-layer">

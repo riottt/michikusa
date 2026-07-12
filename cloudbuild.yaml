@@ -3,7 +3,7 @@ substitutions:
   _REPOSITORY: michikusa
   _TAG: latest
   _NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ""
-  _NEXT_PUBLIC_GOOGLE_MAP_ID: DEMO_MAP_ID
+  _NEXT_PUBLIC_GOOGLE_MAP_ID: ""
 steps:
   - id: build-agent
     name: gcr.io/cloud-builders/docker

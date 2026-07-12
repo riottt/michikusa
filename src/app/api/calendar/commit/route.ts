@@ -44,7 +44,8 @@ export async function POST(request: NextRequest) {
     })
   });
   if (!response.ok) {
-    return NextResponse.json({ error: `Calendar登録に失敗しました: ${(await response.text()).slice(0, 200)}` }, { status: 502 });
+    console.error("Calendar commit response failed", { status: response.status });
+    return NextResponse.json({ error: "Calendarへの登録を完了できませんでした。もう一度試してください。" }, { status: 502 });
   }
   const result = (await response.json()) as CalendarCommitResult;
   if (connection && result.calendar_id) await setCalendarId(sessionId, result.calendar_id);

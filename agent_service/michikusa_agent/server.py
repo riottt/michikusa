@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 
 import google.adk
 from fastapi import Depends, FastAPI, Header, HTTPException
@@ -19,6 +20,7 @@ from .models import (
 from .runtime import runtime
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 app = FastAPI(
     title="MICHIKUSA Agent API",
     version="0.3.0",
@@ -79,8 +81,9 @@ async def plan_stream(request: PlanRequest) -> StreamingResponse:
             async for event in runtime.stream_plan(request):
                 yield json.dumps(event, ensure_ascii=False, default=str) + "\n"
         except Exception as error:
+            logger.error("Agent stream failed: %s", type(error).__name__)
             yield json.dumps(
-                {"type": "error", "message": str(error), "recoverable": False},
+                {"type": "error", "message": "ルートの生成を続けられませんでした。", "recoverable": False},
                 ensure_ascii=False,
             ) + "\n"
 

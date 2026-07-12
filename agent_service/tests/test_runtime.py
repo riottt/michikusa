@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import json
 
 import pytest
 
@@ -14,6 +15,7 @@ from michikusa_agent.models import (
     ReplanRequest,
 )
 from michikusa_agent.runtime import MichikusaRuntime
+from michikusa_agent import server
 
 
 def sample_request(context_hint: str = "outside") -> PlanRequest:
@@ -97,3 +99,18 @@ async def test_replan_graph_preserves_executable_plan_and_return_guard() -> None
         assert changed.end_at <= changed.return_by
         assert changed.share.spots == len(changed.stops)
         assert changed.luck_total == sum(stop.activity.luck for stop in changed.stops)
+
+
+@pytest.mark.asyncio
+async def test_plan_stream_masks_unexpected_provider_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def fail_stream(_: PlanRequest):
+        raise RuntimeError("provider keyString: should-never-reach-the-browser")
+        yield  # pragma: no cover
+
+    monkeypatch.setattr(server.runtime, "stream_plan", fail_stream)
+    response = await server.plan_stream(sample_request())
+    payload = json.loads("".join([chunk async for chunk in response.body_iterator]))
+
+    assert payload["type"] == "error"
+    assert payload["message"] == "ルートの生成を続けられませんでした。"
+    assert "keyString" not in json.dumps(payload)

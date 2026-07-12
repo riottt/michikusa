@@ -28,7 +28,10 @@ export async function POST(request: NextRequest) {
       delay_minutes: parsed.data.delay_minutes
     })
   });
-  if (!response.ok) return NextResponse.json({ error: await response.text() }, { status: 502 });
+  if (!response.ok) {
+    console.error("Agent replan response failed", { status: response.status });
+    return NextResponse.json({ error: "再計画を作れませんでした。少し時間をおいて、もう一度試してください。" }, { status: 502 });
+  }
   const plan = (await response.json()) as MichikusaPlan;
   await savePlan(sessionId, plan);
   return NextResponse.json(plan);
