@@ -16,6 +16,7 @@ from michikusa_agent.models import (
 )
 from michikusa_agent.runtime import MichikusaRuntime
 from michikusa_agent import server
+from michikusa_agent import workflow
 
 
 def sample_request(context_hint: str = "outside") -> PlanRequest:
@@ -36,10 +37,20 @@ def sample_request(context_hint: str = "outside") -> PlanRequest:
     )
 
 
+def test_plan_source_requires_both_live_providers() -> None:
+    plan_source = getattr(workflow, "_plan_source", None)
+    assert callable(plan_source), "workflow._plan_source must define source integrity"
+    assert plan_source(maps_live=True, gemini_live=True) == "live"
+    assert plan_source(maps_live=True, gemini_live=False) == "fallback"
+    assert plan_source(maps_live=False, gemini_live=True) == "fallback"
+    assert plan_source(maps_live=False, gemini_live=False) == "demo"
+
+
 @pytest.mark.asyncio
 async def test_adk_graph_stream_produces_traces_pins_and_plan() -> None:
+    request = sample_request()
     service = MichikusaRuntime()
-    events = [event async for event in service.stream_plan(sample_request())]
+    events = [event async for event in service.stream_plan(request)]
     kinds = [event["type"] for event in events]
     assert kinds[0] == "run_started"
     assert kinds.count("trace") >= 18
@@ -47,9 +58,15 @@ async def test_adk_graph_stream_produces_traces_pins_and_plan() -> None:
     plan = MichikusaPlan.model_validate(next(event["plan"] for event in events if event["type"] == "plan"))
     assert 2 <= len(plan.stops) <= 4
     assert plan.safety.passed
+    assert plan.budget_yen <= request.preferences.budget_yen
+    assert plan.end_at <= plan.return_by
+    assert {check.key for check in plan.safety.checks} >= {"time_window", "budget", "opening_hours", "late_night"}
     assert plan.calendar_events
     assert plan.luck_total == sum(stop.activity.luck for stop in plan.stops)
     assert plan.agent_version.startswith("adk-")
+    share_payload = json.dumps(plan.share.model_dump(mode="json"), ensure_ascii=False)
+    assert str(plan.origin.lat) not in share_payload
+    assert str(plan.origin.lng) not in share_payload
 
 
 @pytest.mark.asyncio
@@ -97,6 +114,8 @@ async def test_replan_graph_preserves_executable_plan_and_return_guard() -> None
         )
         assert changed.duration_minutes >= 1
         assert changed.end_at <= changed.return_by
+        assert changed.return_by <= original.return_by
+        assert any(check.key == "replan_return" and check.passed for check in changed.safety.checks)
         assert changed.share.spots == len(changed.stops)
         assert changed.luck_total == sum(stop.activity.luck for stop in changed.stops)
 

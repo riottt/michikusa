@@ -32,8 +32,6 @@ required_secrets=(
   michikusa-agent-shared-secret
   "$BROWSER_MAPS_KEY_SECRET"
   michikusa-maps-server-key
-  michikusa-oauth-client-id
-  michikusa-oauth-client-secret
   michikusa-token-encryption-key
   michikusa-turso-url
   michikusa-turso-token
@@ -45,6 +43,20 @@ for secret in "${required_secrets[@]}"; do
     exit 1
   fi
 done
+
+OAUTH_CLIENT_ID_PRESENT=false
+OAUTH_CLIENT_SECRET_PRESENT=false
+if gcloud secrets describe michikusa-oauth-client-id --project "$PROJECT_ID" >/dev/null 2>&1; then
+  OAUTH_CLIENT_ID_PRESENT=true
+fi
+if gcloud secrets describe michikusa-oauth-client-secret --project "$PROJECT_ID" >/dev/null 2>&1; then
+  OAUTH_CLIENT_SECRET_PRESENT=true
+fi
+if [[ "$OAUTH_CLIENT_ID_PRESENT" != "$OAUTH_CLIENT_SECRET_PRESENT" ]]; then
+  echo "Calendar OAuth requires both michikusa-oauth-client-id and michikusa-oauth-client-secret." >&2
+  exit 1
+fi
+OAUTH_CONFIGURED="$OAUTH_CLIENT_ID_PRESENT"
 
 gcloud services enable \
   run.googleapis.com artifactregistry.googleapis.com cloudbuild.googleapis.com \
@@ -68,16 +80,22 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 agent_secrets=(michikusa-agent-shared-secret michikusa-maps-server-key)
 web_secrets=(
   michikusa-agent-shared-secret
-  michikusa-oauth-client-id
-  michikusa-oauth-client-secret
   michikusa-token-encryption-key
   michikusa-turso-url
   michikusa-turso-token
 )
+if [[ "$OAUTH_CONFIGURED" == "true" ]]; then
+  web_secrets+=(michikusa-oauth-client-id michikusa-oauth-client-secret)
+fi
 for secret in "${agent_secrets[@]}"; do
   gcloud secrets add-iam-policy-binding "$secret" --project "$PROJECT_ID" \
     --member "serviceAccount:${AGENT_SA}" --role roles/secretmanager.secretAccessor >/dev/null
 done
+
+WEB_SECRET_BINDINGS="AGENT_SHARED_SECRET=michikusa-agent-shared-secret:latest,TOKEN_ENCRYPTION_KEY=michikusa-token-encryption-key:latest,TURSO_DATABASE_URL=michikusa-turso-url:latest,TURSO_AUTH_TOKEN=michikusa-turso-token:latest"
+if [[ "$OAUTH_CONFIGURED" == "true" ]]; then
+  WEB_SECRET_BINDINGS+=",GOOGLE_OAUTH_CLIENT_ID=michikusa-oauth-client-id:latest,GOOGLE_OAUTH_CLIENT_SECRET=michikusa-oauth-client-secret:latest"
+fi
 for secret in "${web_secrets[@]}"; do
   gcloud secrets add-iam-policy-binding "$secret" --project "$PROJECT_ID" \
     --member "serviceAccount:${WEB_SA}" --role roles/secretmanager.secretAccessor >/dev/null
@@ -107,7 +125,7 @@ gcloud run deploy "$WEB_SERVICE" \
   --allow-unauthenticated \
   --memory 768Mi --cpu 1 --timeout 120 --concurrency "${WEB_CONCURRENCY}" --min-instances 0 --max-instances "${MAX_INSTANCES}" \
   --set-env-vars "DEMO_MODE=false,AGENT_SERVICE_URL=${AGENT_URL},AGENT_SERVICE_AUDIENCE=${AGENT_URL}" \
-  --set-secrets "AGENT_SHARED_SECRET=michikusa-agent-shared-secret:latest,GOOGLE_OAUTH_CLIENT_ID=michikusa-oauth-client-id:latest,GOOGLE_OAUTH_CLIENT_SECRET=michikusa-oauth-client-secret:latest,TOKEN_ENCRYPTION_KEY=michikusa-token-encryption-key:latest,TURSO_DATABASE_URL=michikusa-turso-url:latest,TURSO_AUTH_TOKEN=michikusa-turso-token:latest"
+  --set-secrets "$WEB_SECRET_BINDINGS"
 
 WEB_URL="$(gcloud run services describe "$WEB_SERVICE" --project "$PROJECT_ID" --region "$REGION" --format='value(status.url)')"
 gcloud run services update "$WEB_SERVICE" \
@@ -115,4 +133,8 @@ gcloud run services update "$WEB_SERVICE" \
   --update-env-vars "NEXT_PUBLIC_APP_URL=${WEB_URL},GOOGLE_OAUTH_REDIRECT_URI=${WEB_URL}/api/calendar/callback" >/dev/null
 
 printf '\nMICHIKUSA deployed\nWeb:   %s\nAgent: %s (private)\n' "$WEB_URL" "$AGENT_URL"
-printf 'Add this redirect URI to the Google OAuth client:\n%s/api/calendar/callback\n' "$WEB_URL"
+if [[ "$OAUTH_CONFIGURED" == "true" ]]; then
+  printf 'Add this redirect URI to the Google OAuth client:\n%s/api/calendar/callback\n' "$WEB_URL"
+else
+  printf 'Calendar OAuth is not configured. Live planning works; Calendar stays visibly disconnected.\n'
+fi

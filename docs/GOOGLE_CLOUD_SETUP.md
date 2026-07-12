@@ -32,16 +32,22 @@ Maps JavaScript APIはGoogle Cloud ConsoleでBrowser keyと合わせて有効化
 
 ## 3. Secret Manager
 
-次のSecretを作成します。
+次のSecretは必須です。
 
 ```text
 michikusa-agent-shared-secret
+michikusa-maps-browser-key
 michikusa-maps-server-key
-michikusa-oauth-client-id
-michikusa-oauth-client-secret
 michikusa-token-encryption-key
 michikusa-turso-url
 michikusa-turso-token
+```
+
+Calendar連携を有効にする場合だけ、次の2つを必ずペアで追加します。
+
+```text
+michikusa-oauth-client-id
+michikusa-oauth-client-secret
 ```
 
 例:
@@ -83,11 +89,14 @@ Agent側にはGeminiを呼ぶ権限、両方には必要なSecretへのアクセ
 
 ## 6. Calendar OAuth
 
+Calendar OAuthはデプロイの必須条件ではありません。未設定でもGemini、Places、Routesを使った実ルート生成は動作し、画面にはCalendar未接続であることを明示します。
+
 1. OAuth同意画面を設定する。
 2. Web application Clientを作成する。
 3. ローカルURIを登録する。
 4. Cloud Run配置後、Web URLのcallback URIを追加する。
 5. Client ID/SecretをSecret Managerへ保存する。
+6. `deploy.sh`を再実行する。
 
 ## 7. 配置
 
@@ -130,10 +139,13 @@ curl "$WEB_URL/api/health"
 - `web: ok`
 - `database: ok`
 - Agent healthが返る
+- `agent.maps_live: true`
+- `agent.gemini_live: true`
 - Mapsが表示される
-- Calendar OAuth callbackが一致する
-- 「この道草で出発」でCalendarへ予定が入る
-- 遅延再計画後、既存予定が更新される
+- OAuth設定済みの場合はCalendar OAuth callbackが一致する
+- OAuth設定済みの場合は「この道草で出発」でCalendarへ予定が入る
+- OAuth設定済みの場合は遅延再計画後に既存予定が更新される
+- OAuth未設定の場合は「カレンダーは未接続です」と表示される
 
 ## 10. 課金と運用
 

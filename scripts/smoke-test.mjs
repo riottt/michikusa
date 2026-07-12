@@ -19,6 +19,17 @@ console.log("Home:", home.status);
 const health = await request("/api/health");
 if (!health.ok) throw new Error(`Health failed: ${health.status} ${await health.text()}`);
 const healthBody = await health.json();
+if (
+  typeof healthBody.agent?.demo_mode !== "boolean" ||
+  typeof healthBody.agent?.maps_live !== "boolean" ||
+  typeof healthBody.agent?.gemini_live !== "boolean" ||
+  typeof healthBody.agent?.adk_version !== "string"
+) {
+  throw new Error(`Health is missing sanitized agent state: ${JSON.stringify(healthBody)}`);
+}
+if (process.env.REQUIRE_LIVE === "true" && (!healthBody.agent.maps_live || !healthBody.agent.gemini_live)) {
+  throw new Error(`Agent providers are not live: ${JSON.stringify(healthBody.agent)}`);
+}
 console.log("Health:", JSON.stringify(healthBody));
 
 const payload = {
@@ -49,6 +60,9 @@ const plan = lines.find((event) => event.type === "plan")?.plan;
 if (!plan || plan.stops?.length < 2) throw new Error("Plan event or stops missing");
 if (plan.mode !== "departure") throw new Error(`Expected departure mode, got ${plan.mode}`);
 if (!plan.safety?.passed) throw new Error("Safety report did not pass");
+if (process.env.REQUIRE_LIVE === "true" && plan.source !== "live") {
+  throw new Error(`Expected live plan, got ${plan.source}`);
+}
 console.log(`Plan: ${plan.title} / ${plan.stops.length} spots / +${plan.luck_total} LUCK`);
 console.log(`Agent stream: ${lines.length} events / ${lines.filter((item) => item.type === "trace").length} traces`);
 
