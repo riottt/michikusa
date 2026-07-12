@@ -49,6 +49,8 @@ Next.js server
 
 生成AIに全判断を任せず、営業時間、予算、帰宅時刻、夜間の場所選定は検査可能なコードで制御しています。
 
+提案カードには `LIVE DATA`、`DEMO DATA`、`FALLBACK` の実行元を表示します。`LIVE DATA` はGeminiとMapsの両方が実接続されている場合だけ表示されます。`/api/health` では秘密情報を含めず、ADK版とGemini・Mapsの接続状態を確認できます。
+
 ## ローカル起動
 
 ### 前提
@@ -110,6 +112,8 @@ TURSO_AUTH_TOKEN=...
 ```
 
 Googleカレンダーは、画面左上のメニューから接続します。Calendarへ書き込むのは、ユーザーが「この道草で出発」を押した後です。
+
+Calendar OAuthは本番配置の必須条件ではありません。未設定でもGemini、Places、Routesによる実ルート生成は動作し、画面にはCalendar未接続であることを明示します。
 
 ## 主なコマンド
 
