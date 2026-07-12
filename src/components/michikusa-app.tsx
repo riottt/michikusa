@@ -62,6 +62,12 @@ interface Profile {
   homeLocation: GeoPoint | null;
 }
 
+interface ReplanReceipt {
+  reason: ReplanReason;
+  title: string;
+  detail: string;
+}
+
 interface StreamEvent {
   type: string;
   trace?: AgentTraceEvent;
@@ -109,6 +115,29 @@ function timeLabel(value: string): string {
 
 function moneyLabel(value: number): string {
   return new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY", maximumFractionDigits: 0 }).format(value);
+}
+
+function buildReplanReceipt(previous: MichikusaPlan, next: MichikusaPlan, reason: ReplanReason): ReplanReceipt {
+  const durationDelta = next.duration_minutes - previous.duration_minutes;
+  const spotDelta = next.stops.length - previous.stops.length;
+  const titleByReason: Record<ReplanReason, string> = {
+    delay: "15分の遅れに合わせて再計画",
+    closed: "閉まっている場所を入れ替えました",
+    tired: "休みやすい道草へ軽くしました",
+    go_home: "帰る道へ切り替えました"
+  };
+  const durationText = durationDelta === 0
+    ? "所要時間を維持"
+    : `${Math.abs(durationDelta)}分${durationDelta < 0 ? "短縮" : "調整"}`;
+  const spotText = spotDelta === 0
+    ? `${next.stops.length}地点を維持`
+    : `${previous.stops.length}→${next.stops.length}地点`;
+
+  return {
+    reason,
+    title: titleByReason[reason],
+    detail: `${durationText}・${spotText}・${timeLabel(next.return_by)}までに帰宅`
+  };
 }
 
 function TransportGlyph({ transport, size = 15 }: { transport: Transport; size?: number }) {
@@ -222,6 +251,7 @@ export function MichikusaApp() {
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [calendarCommit, setCalendarCommit] = useState<CalendarCommitResult | null>(null);
+  const [replanReceipt, setReplanReceipt] = useState<ReplanReceipt | null>(null);
   const [timerRemaining, setTimerRemaining] = useState<number | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [memories, setMemories] = useState<MichikusaPlan[]>([]);
@@ -338,6 +368,7 @@ export function MichikusaApp() {
     setCurrentSpotIndex(0);
     setEarnedLuck(0);
     setCalendarCommit(null);
+    setReplanReceipt(null);
     const requestId = crypto.randomUUID();
     const body = {
       request_id: requestId,
@@ -383,7 +414,7 @@ export function MichikusaApp() {
       if (response.ok) {
         const result = (await response.json()) as CalendarCommitResult;
         setCalendarCommit(result);
-        setToast(result.demo ? "予定を記録しました" : "カレンダーに予定を追加しました");
+        setToast(result.demo ? "道草を開始しました。カレンダーは未接続です" : "カレンダーに予定を追加しました");
       } else if (response.status === 409) {
         setToast("カレンダー未接続。ルートはそのまま開始できます");
       } else {
@@ -460,6 +491,7 @@ export function MichikusaApp() {
       });
       if (!response.ok) throw new Error(await response.text());
       const next = (await response.json()) as MichikusaPlan;
+      setReplanReceipt(buildReplanReceipt(plan, next, reason));
       setPlan(next);
       setPins(next.stops);
       setCurrentSpotIndex(Math.max(0, Math.min(currentSpotIndex, next.stops.length - 1)));
@@ -529,6 +561,7 @@ export function MichikusaApp() {
     setCurrentSpotIndex(0);
     setCompletedSpotIds(new Set());
     setEarnedLuck(0);
+    setReplanReceipt(null);
     setError(null);
   }
 
@@ -630,11 +663,18 @@ export function MichikusaApp() {
           </div>
           <div className="ready-head">
             <div>
-              <span className="eyebrow"><Route size={14} /> TODAY&apos;S MICHIKUSA</span>
+              <div className="ready-meta">
+                <span className="eyebrow"><Route size={14} /> TODAY&apos;S MICHIKUSA</span>
+                <span className={`runtime-badge runtime-badge--${plan.source}`}>
+                  {plan.source === "live" ? "LIVE DATA" : plan.source === "fallback" ? "FALLBACK" : "DEMO DATA"}
+                </span>
+              </div>
               <h2>{plan.title}</h2>
               <p>{plan.subtitle}</p>
             </div>
-            <div className="safety-score"><ShieldCheck size={16} /><strong>{plan.safety.score}</strong></div>
+            <div className="safety-score" aria-label={`安全確認 ${plan.safety.score}点`}>
+              <ShieldCheck size={16} /><span>安全確認</span><strong>{plan.safety.score}</strong>
+            </div>
           </div>
           <div className="summary-row">
             <span><Clock3 size={15} />{timeLabel(plan.start_at)}–{timeLabel(plan.return_by)}</span>
@@ -663,9 +703,15 @@ export function MichikusaApp() {
 
       {phase === "active" && plan && currentSpot && (
         <section className="bottom-panel bottom-panel--active">
+          {replanReceipt && (
+            <div className="replan-receipt" role="status" aria-live="polite">
+              <strong>{replanReceipt.title}</strong>
+              <span>{replanReceipt.detail}</span>
+            </div>
+          )}
           <div className="active-topline">
             <span>NEXT · {progressText}</span>
-            <button type="button" onClick={() => setSheet("replan")}><CircleEllipsis size={19} /></button>
+            <button type="button" aria-label="予定変更・再計画" onClick={() => setSheet("replan")}><CircleEllipsis size={19} /></button>
           </div>
           <div className="next-place">
             <div className={`spot-number spot-number--${currentSpot.activity.color}`}>{currentSpot.order}</div>
