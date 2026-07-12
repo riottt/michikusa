@@ -79,6 +79,13 @@ SMOKE_BASE_URL="https://michikusa-web-ap2prbrn6q-an.a.run.app" \
 
 Maps JavaScript APIの非同期ローダー推奨とlegacy Marker非推奨のwarningは残るが、console errorとfailed requestは発生していない。
 
+## Cost / security verification
+
+- `npm run test:cost`: LibSQLの原子的な全体10分・JST日次枠、上限更新、JSON Content-Type/64 KiB境界、Agentのprovider-free demo、Gemini生成上限を検証する。
+- `npm run verify`: lint、typecheck、harness、cost/agent tests、production buildをまとめて実行する。
+- 本番readbackではCloud Runのservice/revision max=1、min=0、Agent concurrency<=2、Web SAだけのAgent invoker、cost guard環境変数名、Budget project filter、API quota、API key restrictionsを確認する。
+- Budget Alertは通知だけで支出を止めない。hard controlは永続live枠、Cloud Run max、Maps/Places/Routes quotaで行う。
+
 ## 実認証が必要なため別途確認する項目
 
 - Google OAuthと実Calendar書き込み

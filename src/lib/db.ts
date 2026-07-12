@@ -69,6 +69,11 @@ export async function ensureSchema(): Promise<void> {
           luck_total INTEGER NOT NULL DEFAULT 120,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS costly_request_counters (
+          bucket_key TEXT PRIMARY KEY,
+          request_count INTEGER NOT NULL,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )`
       ];
       await db.batch(statements.map((sql) => ({ sql, args: [] })), "write");

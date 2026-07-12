@@ -105,9 +105,11 @@ def _normalise_place(raw: dict[str, Any]) -> PlaceCandidate | None:
     )
 
 
-async def search_places(origin: GeoPoint, radius_m: int, max_results: int = 20) -> list[PlaceCandidate]:
+async def search_places(
+    origin: GeoPoint, radius_m: int, max_results: int = 20, *, force_demo: bool = False
+) -> list[PlaceCandidate]:
     settings = get_settings()
-    if not settings.live_maps_enabled:
+    if force_demo or not settings.live_maps_enabled:
         await asyncio.sleep(0.18)
         return demo_places(origin, radius_m)
 
@@ -154,10 +156,12 @@ async def search_places(origin: GeoPoint, radius_m: int, max_results: int = 20) 
     return places[:max_results]
 
 
-async def compute_route_geometry(route: RouteDraft) -> tuple[int, int, str | None, list[GeoPoint], str]:
+async def compute_route_geometry(
+    route: RouteDraft, *, force_demo: bool = False
+) -> tuple[int, int, str | None, list[GeoPoint], str]:
     settings = get_settings()
     points = [route.origin, *[stop.place.location for stop in route.stops]]
-    if not settings.live_maps_enabled or len(points) < 2:
+    if force_demo or not settings.live_maps_enabled or len(points) < 2:
         distance = 0
         for start, end in zip(points, points[1:]):
             distance += int(haversine_m(start, end) * 1.16)

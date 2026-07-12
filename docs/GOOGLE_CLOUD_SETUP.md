@@ -160,6 +160,21 @@ curl "$WEB_URL/api/health"
 
 - Cloud Runは`deploy.sh`の既定で最小0・最大1インスタンス。増やす場合は`MAX_INSTANCES`を明示してから行う。
 - PlacesのFieldMaskを必要項目に限定する。
+
+## Cost guard readback
+
+本番デプロイはWeb/Agentのrevision maxとservice maxを1、minを0、Agent concurrencyを2へ固定します。Webには次の永続cost guard既定値が入ります。
+
+```text
+COST_GUARD_DAILY_PLAN_LIMIT=40
+COST_GUARD_DAILY_REPLAN_LIMIT=80
+COST_GUARD_DAILY_CALENDAR_LIMIT=80
+COST_GUARD_10M_PLAN_LIMIT=10
+COST_GUARD_10M_REPLAN_LIMIT=30
+COST_GUARD_10M_CALENDAR_LIMIT=30
+```
+
+Google Cloud側にもproject限定の500 JPY/月Budget Alert（50/80/100%）と、Maps 500/日、Places SearchNearby 100/日、Routes ComputeRoutes 100/日のquotaを設定します。Budgetは通知のみで、支出を自動停止しません。quota変更前後は`gcloud alpha services quota list`でservice、metric、unit、effectiveLimitを確認してください。
 - 候補取得は一回20件以内にする。
 - Next.js側で、計画生成と再計画をセッションごとに10分3回・IPごとに10分12回へ制限する。
 - Cloud Billingでプロジェクト単位の月額Budget Alertを作成する。Budgetは通知のみで自動停止しないため、Cloud Run上限とAPIキー制限を併用する。

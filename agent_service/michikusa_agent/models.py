@@ -52,6 +52,7 @@ class PlanRequest(BaseModel):
     preferences: Preferences = Field(default_factory=Preferences)
     calendar: CalendarContext = Field(default_factory=CalendarContext)
     history: list[HistoryItem] = Field(default_factory=list)
+    force_demo: bool = False
 
 
 class PlaceCandidate(BaseModel):

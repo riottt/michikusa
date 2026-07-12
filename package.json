@@ -15,13 +15,15 @@
     "typecheck": "tsc --noEmit",
     "test:agent": "node scripts/test-agent.mjs",
     "test:smoke": "node scripts/smoke-test.mjs",
-    "verify": "npm run lint && npm run typecheck && npm run test:harness && npm run test:agent && npm run build",
+    "verify": "npm run lint && npm run typecheck && npm run test:harness && npm run test:cost && npm run security:check && npm run build",
     "db:migrate": "node scripts/migrate.mjs",
     "preview:screenshot": "node scripts/capture.mjs",
     "start:standalone": "node scripts/start.mjs",
     "test:e2e": "node scripts/e2e-check.mjs",
     "harness": "node scripts/harness.mjs",
     "test:harness": "node --test tests/harness.test.mjs",
+    "test:cost": "node --experimental-strip-types --test tests/cost-policy.test.mjs && npm run test:agent",
+    "security:check": "npm audit --audit-level=high && node scripts/secret-scan.mjs",
     "test:harness:coverage": "node --experimental-test-coverage --test-coverage-include='scripts/harness/*.mjs' --test-coverage-lines=80 --test-coverage-functions=80 --test-coverage-branches=80 --test tests/harness.test.mjs"
   },
   "engines": {

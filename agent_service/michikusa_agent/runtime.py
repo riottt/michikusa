@@ -169,14 +169,16 @@ class MichikusaRuntime:
             "runtime": "live" if (self.settings.live_gemini_enabled or self.settings.live_maps_enabled) else "demo-adk",
             "at": request.now.isoformat(),
         }
-        force_demo = False
+        force_demo = request.force_demo
         while True:
             try:
                 final: MichikusaPlan | None = None
                 pins_emitted = False
                 async for item in self._run_graph(
                     workflow=build_plan_workflow(force_demo=force_demo),
-                    initial_state={"request": request.model_dump(mode="json")},
+                    initial_state={
+                        "request": request.model_copy(update={"force_demo": force_demo}).model_dump(mode="json")
+                    },
                     final_key="final_plan",
                     user_id=request.user_id,
                     session_id=f"plan-{uuid.uuid4().hex}",

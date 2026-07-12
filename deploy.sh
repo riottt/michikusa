@@ -26,7 +26,13 @@ IMAGE_BASE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}"
 # per service unless an explicit deployment override is supplied.
 MAX_INSTANCES="${MAX_INSTANCES:-1}"
 WEB_CONCURRENCY="${WEB_CONCURRENCY:-20}"
-AGENT_CONCURRENCY="${AGENT_CONCURRENCY:-4}"
+AGENT_CONCURRENCY="${AGENT_CONCURRENCY:-2}"
+COST_GUARD_DAILY_PLAN_LIMIT="${COST_GUARD_DAILY_PLAN_LIMIT:-40}"
+COST_GUARD_DAILY_REPLAN_LIMIT="${COST_GUARD_DAILY_REPLAN_LIMIT:-80}"
+COST_GUARD_DAILY_CALENDAR_LIMIT="${COST_GUARD_DAILY_CALENDAR_LIMIT:-80}"
+COST_GUARD_10M_PLAN_LIMIT="${COST_GUARD_10M_PLAN_LIMIT:-10}"
+COST_GUARD_10M_REPLAN_LIMIT="${COST_GUARD_10M_REPLAN_LIMIT:-30}"
+COST_GUARD_10M_CALENDAR_LIMIT="${COST_GUARD_10M_CALENDAR_LIMIT:-30}"
 
 required_secrets=(
   michikusa-agent-shared-secret
@@ -109,7 +115,7 @@ gcloud run deploy "$AGENT_SERVICE" \
   --image "${IMAGE_BASE}/michikusa-agent:${TAG}" \
   --service-account "$AGENT_SA" \
   --no-allow-unauthenticated \
-  --memory 1Gi --cpu 1 --timeout 120 --concurrency "${AGENT_CONCURRENCY}" --min-instances 0 --max-instances "${MAX_INSTANCES}" \
+  --memory 1Gi --cpu 1 --timeout 90 --concurrency "${AGENT_CONCURRENCY}" --min-instances 0 --max-instances "${MAX_INSTANCES}" \
   --set-env-vars "DEMO_MODE=false,GOOGLE_GENAI_USE_ENTERPRISE=true,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${AGENT_PLATFORM_LOCATION:-global},GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.5-flash}" \
   --set-secrets "AGENT_SHARED_SECRET=michikusa-agent-shared-secret:latest,GOOGLE_MAPS_SERVER_API_KEY=michikusa-maps-server-key:latest"
 
@@ -123,14 +129,21 @@ gcloud run deploy "$WEB_SERVICE" \
   --image "${IMAGE_BASE}/michikusa-web:${TAG}" \
   --service-account "$WEB_SA" \
   --allow-unauthenticated \
-  --memory 768Mi --cpu 1 --timeout 120 --concurrency "${WEB_CONCURRENCY}" --min-instances 0 --max-instances "${MAX_INSTANCES}" \
-  --set-env-vars "DEMO_MODE=false,AGENT_SERVICE_URL=${AGENT_URL},AGENT_SERVICE_AUDIENCE=${AGENT_URL}" \
+  --memory 768Mi --cpu 1 --timeout 90 --concurrency "${WEB_CONCURRENCY}" --min-instances 0 --max-instances "${MAX_INSTANCES}" \
+  --set-env-vars "DEMO_MODE=false,AGENT_SERVICE_URL=${AGENT_URL},AGENT_SERVICE_AUDIENCE=${AGENT_URL},COST_GUARD_DAILY_PLAN_LIMIT=${COST_GUARD_DAILY_PLAN_LIMIT},COST_GUARD_DAILY_REPLAN_LIMIT=${COST_GUARD_DAILY_REPLAN_LIMIT},COST_GUARD_DAILY_CALENDAR_LIMIT=${COST_GUARD_DAILY_CALENDAR_LIMIT},COST_GUARD_10M_PLAN_LIMIT=${COST_GUARD_10M_PLAN_LIMIT},COST_GUARD_10M_REPLAN_LIMIT=${COST_GUARD_10M_REPLAN_LIMIT},COST_GUARD_10M_CALENDAR_LIMIT=${COST_GUARD_10M_CALENDAR_LIMIT}" \
   --set-secrets "$WEB_SECRET_BINDINGS"
 
 WEB_URL="$(gcloud run services describe "$WEB_SERVICE" --project "$PROJECT_ID" --region "$REGION" --format='value(status.url)')"
 gcloud run services update "$WEB_SERVICE" \
   --project "$PROJECT_ID" --region "$REGION" \
   --update-env-vars "NEXT_PUBLIC_APP_URL=${WEB_URL},GOOGLE_OAUTH_REDIRECT_URI=${WEB_URL}/api/calendar/callback" >/dev/null
+
+# Revision max protects each deployment. Service-level max protects the whole
+# service across traffic splits and is the stronger cost ceiling.
+gcloud alpha run services update "$AGENT_SERVICE" \
+  --project "$PROJECT_ID" --region "$REGION" --max "$MAX_INSTANCES" --min 0 --quiet >/dev/null
+gcloud alpha run services update "$WEB_SERVICE" \
+  --project "$PROJECT_ID" --region "$REGION" --max "$MAX_INSTANCES" --min 0 --quiet >/dev/null
 
 printf '\nMICHIKUSA deployed\nWeb:   %s\nAgent: %s (private)\n' "$WEB_URL" "$AGENT_URL"
 if [[ "$OAUTH_CONFIGURED" == "true" ]]; then

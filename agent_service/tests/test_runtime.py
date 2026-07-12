@@ -17,6 +17,7 @@ from michikusa_agent.models import (
 from michikusa_agent.runtime import MichikusaRuntime
 from michikusa_agent import server
 from michikusa_agent import workflow
+from michikusa_agent.config import Settings
 
 
 def sample_request(context_hint: str = "outside") -> PlanRequest:
@@ -44,6 +45,36 @@ def test_plan_source_requires_both_live_providers() -> None:
     assert plan_source(maps_live=True, gemini_live=False) == "fallback"
     assert plan_source(maps_live=False, gemini_live=True) == "fallback"
     assert plan_source(maps_live=False, gemini_live=False) == "demo"
+
+
+def test_live_llm_nodes_have_bounded_generation(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "test-project")
+    monkeypatch.setenv("GOOGLE_GENAI_USE_ENTERPRISE", "true")
+    settings = Settings(
+        demo_mode=False,
+        maps_server_api_key="test-key",
+        gemini_model="gemini-test",
+        agent_shared_secret="test-secret",
+    )
+    creative = workflow._creative_agent(settings, False)
+    narrator = workflow._memory_agent(settings, False)
+    assert creative.generate_content_config.max_output_tokens == 512
+    assert narrator.generate_content_config.max_output_tokens == 256
+    assert creative.generate_content_config.candidate_count == 1
+    assert narrator.generate_content_config.candidate_count == 1
+    assert creative.timeout == 30
+    assert narrator.timeout == 20
+
+
+@pytest.mark.asyncio
+async def test_forced_demo_plan_does_not_call_live_maps(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def unexpected_call(*args, **kwargs):
+        raise AssertionError("live HTTP client must not be used")
+
+    monkeypatch.setattr("httpx.AsyncClient.post", unexpected_call)
+    request = sample_request().model_copy(update={"force_demo": True})
+    plan = await MichikusaRuntime().create_plan(request)
+    assert plan.source in {"demo", "fallback"}
 
 
 @pytest.mark.asyncio

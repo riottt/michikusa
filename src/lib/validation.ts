@@ -38,8 +38,8 @@ export const planSaveSchema = z.object({
 });
 
 export const planStatusSchema = z.object({
-  planId: z.string().min(1),
+  planId: z.string().min(1).max(120),
   status: z.enum(["planned", "active", "completed"]),
-  luckEarned: z.number().int().min(0).optional(),
-  calendarEventIds: z.array(z.string()).optional()
+  luckEarned: z.number().int().min(0).max(10_000).optional(),
+  calendarEventIds: z.array(z.string().min(1).max(256)).max(32).optional()
 });
