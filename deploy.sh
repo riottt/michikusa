@@ -10,6 +10,14 @@ AGENT_SERVICE="${AGENT_SERVICE:-michikusa-agent}"
 WEB_SA="${WEB_SERVICE_ACCOUNT:-michikusa-web@${PROJECT_ID}.iam.gserviceaccount.com}"
 AGENT_SA="${AGENT_SERVICE_ACCOUNT:-michikusa-agent@${PROJECT_ID}.iam.gserviceaccount.com}"
 MAPS_BROWSER_KEY="${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}"
+BROWSER_MAPS_KEY_SECRET="${BROWSER_MAPS_KEY_SECRET:-michikusa-maps-browser-key}"
+if [[ -z "$MAPS_BROWSER_KEY" ]] && gcloud secrets describe "$BROWSER_MAPS_KEY_SECRET" --project "$PROJECT_ID" >/dev/null 2>&1; then
+  MAPS_BROWSER_KEY="$(gcloud secrets versions access latest --secret "$BROWSER_MAPS_KEY_SECRET" --project "$PROJECT_ID")"
+fi
+if [[ -z "$MAPS_BROWSER_KEY" ]]; then
+  echo "Missing browser Maps key. Set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY or create Secret Manager secret: $BROWSER_MAPS_KEY_SECRET" >&2
+  exit 1
+fi
 # A map ID is optional for the standard Maps JavaScript map.  Do not inject the
 # development-only DEMO_MAP_ID into production builds when no real map ID exists.
 MAP_ID="${NEXT_PUBLIC_GOOGLE_MAP_ID-}"
@@ -22,6 +30,7 @@ AGENT_CONCURRENCY="${AGENT_CONCURRENCY:-4}"
 
 required_secrets=(
   michikusa-agent-shared-secret
+  "$BROWSER_MAPS_KEY_SECRET"
   michikusa-maps-server-key
   michikusa-oauth-client-id
   michikusa-oauth-client-secret

@@ -29,6 +29,13 @@ const palette = {
   orange: "#ff8a52"
 } as const;
 
+const fallbackMapBounds = 120;
+const fallbackMapZoom = { min: 1, max: 1.7, step: 0.12 };
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
 function project(point: GeoPoint, center: GeoPoint): { x: number; y: number } {
   const x = 50 + (point.lng - center.lng) * 4300;
   const y = 49 - (point.lat - center.lat) * 4300;
@@ -46,6 +53,8 @@ function DemoMap({
   planning,
   completedSpotIds
 }: Omit<MapCanvasProps, "plan">) {
+  const [viewport, setViewport] = useState({ x: 0, y: 0, scale: 1 });
+  const drag = useRef<{ pointerId: number; x: number; y: number; originX: number; originY: number } | null>(null);
   const points = useMemo(
     () => [current, ...pins.map((pin) => pin.location)],
     [current, pins]
@@ -53,9 +62,78 @@ function DemoMap({
   const route = points.map((point) => project(point, current));
   const polyline = route.map((point) => `${point.x},${point.y}`).join(" ");
 
+  function updateZoom(direction: 1 | -1) {
+    setViewport((value) => ({
+      ...value,
+      scale: clamp(value.scale + fallbackMapZoom.step * direction, fallbackMapZoom.min, fallbackMapZoom.max)
+    }));
+  }
+
+  function finishDrag(event: React.PointerEvent<HTMLDivElement>) {
+    if (drag.current?.pointerId !== event.pointerId) return;
+    drag.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
+
   return (
-    <div className="demo-map" aria-label="現在地とルートの地図">
-      <svg className="demo-map__svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+    <div
+      className="demo-map"
+      aria-label="現在地とルートの地図"
+      aria-describedby="map-gesture-hint"
+      tabIndex={0}
+      onPointerDown={(event) => {
+        if (event.button !== 0) return;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        drag.current = {
+          pointerId: event.pointerId,
+          x: event.clientX,
+          y: event.clientY,
+          originX: viewport.x,
+          originY: viewport.y
+        };
+      }}
+      onPointerMove={(event) => {
+        const activeDrag = drag.current;
+        if (!activeDrag || activeDrag.pointerId !== event.pointerId) return;
+        setViewport((value) => ({
+          ...value,
+          x: clamp(activeDrag.originX + event.clientX - activeDrag.x, -fallbackMapBounds, fallbackMapBounds),
+          y: clamp(activeDrag.originY + event.clientY - activeDrag.y, -fallbackMapBounds, fallbackMapBounds)
+        }));
+      }}
+      onPointerUp={finishDrag}
+      onPointerCancel={finishDrag}
+      onWheel={(event) => {
+        event.preventDefault();
+        updateZoom(event.deltaY < 0 ? 1 : -1);
+      }}
+      onKeyDown={(event) => {
+        const keyboardPan = 28;
+        if (event.key === "+" || event.key === "=") {
+          event.preventDefault();
+          updateZoom(1);
+        } else if (event.key === "-") {
+          event.preventDefault();
+          updateZoom(-1);
+        } else if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) {
+          event.preventDefault();
+          setViewport((value) => ({
+            ...value,
+            x: clamp(value.x + (event.key === "ArrowLeft" ? keyboardPan : event.key === "ArrowRight" ? -keyboardPan : 0), -fallbackMapBounds, fallbackMapBounds),
+            y: clamp(value.y + (event.key === "ArrowUp" ? keyboardPan : event.key === "ArrowDown" ? -keyboardPan : 0), -fallbackMapBounds, fallbackMapBounds)
+          }));
+        }
+      }}
+    >
+      <p id="map-gesture-hint" className="map-gesture-hint">ドラッグ、スクロール、矢印キーで地図を見回せます。</p>
+      <div
+        className="demo-map__content"
+        data-testid="demo-map-content"
+        style={{ transform: `translate3d(${viewport.x}px, ${viewport.y}px, 0) scale(${viewport.scale})` }}
+      >
+        <svg className="demo-map__svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
         <defs>
           <linearGradient id="mapFade" x1="0" x2="1" y1="0" y2="1">
             <stop offset="0" stopColor="#fffdfc" />
@@ -111,42 +189,43 @@ function DemoMap({
             className="route-line"
           />
         )}
-      </svg>
+        </svg>
 
-      {candidates.map((candidate, index) => {
-        const point = project(candidate.location, current);
-        return (
-          <span
-            key={candidate.place_id}
-            className={`candidate-dot ${candidate.accepted === false ? "candidate-dot--rejected" : ""}`}
-            style={{ left: `${point.x}%`, top: `${point.y}%`, animationDelay: `${index * 32}ms` }}
-            aria-hidden="true"
-          />
-        );
-      })}
+        {candidates.map((candidate, index) => {
+          const point = project(candidate.location, current);
+          return (
+            <span
+              key={candidate.place_id}
+              className={`candidate-dot ${candidate.accepted === false ? "candidate-dot--rejected" : ""}`}
+              style={{ left: `${point.x}%`, top: `${point.y}%`, animationDelay: `${index * 32}ms` }}
+              aria-hidden="true"
+            />
+          );
+        })}
 
-      <div className="current-location" style={{ left: "50%", top: "49%" }}>
-        <span className="current-location__pulse" />
-        <span className="current-location__dot" />
+        <div className="current-location" style={{ left: "50%", top: "49%" }}>
+          <span className="current-location__pulse" />
+          <span className="current-location__dot" />
+        </div>
+
+        {pins.map((pin, index) => {
+          const point = project(pin.location, current);
+          const isCurrent = index === currentSpotIndex;
+          const isComplete = completedSpotIds.has(pin.id);
+          const color = palette[pin.activity.color];
+          return (
+            <button
+              type="button"
+              key={pin.id}
+              className={`map-pin ${isCurrent ? "map-pin--current" : ""} ${isComplete ? "map-pin--complete" : ""}`}
+              style={{ left: `${point.x}%`, top: `${point.y}%`, "--pin-color": color } as React.CSSProperties}
+              aria-label={`${pin.order}. ${pin.name}`}
+            >
+              {isComplete ? "✓" : pin.order}
+            </button>
+          );
+        })}
       </div>
-
-      {pins.map((pin, index) => {
-        const point = project(pin.location, current);
-        const isCurrent = index === currentSpotIndex;
-        const isComplete = completedSpotIds.has(pin.id);
-        const color = palette[pin.activity.color];
-        return (
-          <button
-            type="button"
-            key={pin.id}
-            className={`map-pin ${isCurrent ? "map-pin--current" : ""} ${isComplete ? "map-pin--complete" : ""}`}
-            style={{ left: `${point.x}%`, top: `${point.y}%`, "--pin-color": color } as React.CSSProperties}
-            aria-label={`${pin.order}. ${pin.name}`}
-          >
-            {isComplete ? "✓" : pin.order}
-          </button>
-        );
-      })}
 
       {planning && (
         <div className="map-scanner" aria-hidden="true">
@@ -184,6 +263,7 @@ function GoogleMapCanvas({ current, candidates, pins, currentSpotIndex, complete
   const node = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const overlays = useRef<Array<google.maps.MVCObject>>([]);
+  const framedViewport = useRef<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [mapReady, setMapReady] = useState(false);
 
@@ -198,6 +278,10 @@ function GoogleMapCanvas({ current, candidates, pins, currentSpotIndex, complete
           disableDefaultUI: true,
           clickableIcons: false,
           gestureHandling: "greedy",
+          draggable: true,
+          scrollwheel: true,
+          disableDoubleClickZoom: false,
+          keyboardShortcuts: true,
           mapId: process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || undefined,
           styles: process.env.NEXT_PUBLIC_GOOGLE_MAP_ID
             ? undefined
@@ -274,6 +358,12 @@ function GoogleMapCanvas({ current, candidates, pins, currentSpotIndex, complete
       bounds.extend(pin.location);
     });
 
+    const viewportKey = JSON.stringify({
+      current,
+      candidates: candidates.map((candidate) => candidate.location),
+      pins: pins.map((pin) => pin.location)
+    });
+
     if (pins.length) {
       const line = new g.maps.Polyline({
         map,
@@ -284,9 +374,13 @@ function GoogleMapCanvas({ current, candidates, pins, currentSpotIndex, complete
         geodesic: true
       });
       overlays.current.push(line);
-      map.fitBounds(bounds, 72);
-    } else {
+      if (framedViewport.current !== viewportKey) {
+        map.fitBounds(bounds, 72);
+        framedViewport.current = viewportKey;
+      }
+    } else if (!pins.length && framedViewport.current !== viewportKey) {
       map.panTo(current);
+      framedViewport.current = viewportKey;
     }
   }, [mapReady, current, candidates, pins, currentSpotIndex, completedSpotIds]);
 

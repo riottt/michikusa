@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import process from "node:process";
 import { chromium } from "playwright-core";
 
-const base = process.env.E2E_BASE_URL || "http://127.0.0.1:3000";
+const base = process.env.E2E_BASE_URL || "http://localhost:3000";
 const executablePath = process.env.CHROMIUM_PATH || "/usr/bin/chromium";
 const output = process.env.E2E_OUTPUT_DIR || "artifacts";
 const desktop = process.env.E2E_LAYOUT === "desktop";
@@ -45,6 +45,36 @@ async function visibleText(text, timeout = 30_000) {
 
 await page.goto(base, { waitUntil: "networkidle" });
 await visibleText("MICHIKUSA");
+
+async function assertFallbackMapCanMove() {
+  const fallbackMap = page.locator(".demo-map");
+  if ((await fallbackMap.count()) === 0) return;
+
+  const mapContent = page.getByTestId("demo-map-content");
+  if ((await mapContent.count()) !== 1) {
+    throw new Error("Fallback map is missing an interactive map surface.");
+  }
+
+  const mapBox = await fallbackMap.boundingBox();
+  if (!mapBox) throw new Error("Fallback map is not visible.");
+
+  const before = await mapContent.evaluate((node) => getComputedStyle(node).transform);
+  const dragStart = {
+    x: mapBox.x + mapBox.width / 2,
+    y: mapBox.y + mapBox.height * 0.35
+  };
+  await page.mouse.move(dragStart.x, dragStart.y);
+  await page.mouse.down();
+  await page.mouse.move(dragStart.x + 72, dragStart.y + 36, { steps: 4 });
+  await page.mouse.up();
+  const after = await mapContent.evaluate((node) => getComputedStyle(node).transform);
+
+  if (before === after) {
+    throw new Error("Fallback map did not move after a drag gesture.");
+  }
+}
+
+await assertFallbackMapCanMove();
 
 const technicalLabels = ["ADK", "DEMO", "デモ", "AI OUTING AGENT", "AGENT IS MOVING", "Google ADK", "Calendar", "Google Routes"];
 async function assertProductCopy() {
