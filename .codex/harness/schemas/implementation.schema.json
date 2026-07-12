@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://michikusa.local/schemas/implementation.schema.json",
+  "title": "MICHIKUSA harness implementation result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "role", "actor_id", "task_slug", "iteration", "status", "summary", "changes", "verification", "artifacts"],
+  "properties": {
+    "version": { "const": 1 },
+    "role": { "const": "implementer" },
+    "actor_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$" },
+    "task_slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 80 },
+    "iteration": { "type": "integer", "minimum": 1 },
+    "status": { "const": "success" },
+    "summary": { "type": "string", "minLength": 1 },
+    "changes": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "verification": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "prefixItems": [
+        { "$ref": "#/$defs/redEvidence" },
+        { "$ref": "#/$defs/greenEvidence" },
+        { "$ref": "#/$defs/finalEvidence" }
+      ],
+      "items": false
+    },
+    "artifacts": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  },
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "command", "receipt", "exit_code", "output_sha256", "receipt_signature"],
+      "properties": {
+        "stage": { "enum": ["red", "green", "final"] },
+        "command": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9:_-]*$" },
+        "receipt": { "type": "string", "pattern": "^\\.codex/harness/runtime/[a-z0-9-]+/receipts/[1-9][0-9]*/(red|green|final)\\.json$" },
+        "exit_code": { "type": "integer" },
+        "output_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "receipt_signature": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "redEvidence": { "allOf": [{ "$ref": "#/$defs/evidence" }, { "type": "object", "properties": { "stage": { "const": "red" }, "exit_code": { "not": { "const": 0 } } } }] },
+    "greenEvidence": { "allOf": [{ "$ref": "#/$defs/evidence" }, { "type": "object", "properties": { "stage": { "const": "green" }, "exit_code": { "const": 0 } } }] },
+    "finalEvidence": { "allOf": [{ "$ref": "#/$defs/evidence" }, { "type": "object", "properties": { "stage": { "const": "final" }, "exit_code": { "const": 0 } } }] }
+  }
+}

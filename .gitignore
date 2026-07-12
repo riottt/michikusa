@@ -37,3 +37,9 @@ Thumbs.db
 
 # generated previews
 artifacts/
+
+# delivery harness runtime state and logs
+.codex/harness/runtime/
+.codex/harness/logs/
+.codex/harness/inbox/*
+!.codex/harness/inbox/.gitkeep

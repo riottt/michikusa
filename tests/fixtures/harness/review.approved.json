@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "role": "reviewer",
+  "actor_id": "reviewer-one",
+  "task_slug": "fixture-task",
+  "iteration": 1,
+  "status": "approved",
+  "summary": "No blocking findings.",
+  "findings": [],
+  "verification": ["Reviewed the diff and test evidence"],
+  "next_actions": []
+}
