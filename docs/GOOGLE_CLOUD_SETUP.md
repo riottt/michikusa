@@ -22,9 +22,11 @@ gcloud services enable \
   artifactregistry.googleapis.com \
   cloudbuild.googleapis.com \
   secretmanager.googleapis.com \
+  apikeys.googleapis.com \
   aiplatform.googleapis.com \
   places.googleapis.com \
   routes.googleapis.com \
+  maps-backend.googleapis.com \
   calendar-json.googleapis.com
 ```
 
@@ -62,6 +64,13 @@ printf '%s' 'long-random-value' | \
 ```bash
 printf '%s' 'new-value' | \
   gcloud secrets versions add michikusa-agent-shared-secret --data-file=-
+```
+
+Secret値へ意図しない末尾改行を入れないでください。乱数を生成して直接渡す場合は `tr -d '\n'` を通します。
+
+```bash
+openssl rand -hex 32 | tr -d '\n' | \
+  gcloud secrets create michikusa-agent-shared-secret --data-file=-
 ```
 
 ## 4. サービスアカウント

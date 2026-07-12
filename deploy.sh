@@ -60,8 +60,8 @@ OAUTH_CONFIGURED="$OAUTH_CLIENT_ID_PRESENT"
 
 gcloud services enable \
   run.googleapis.com artifactregistry.googleapis.com cloudbuild.googleapis.com \
-  secretmanager.googleapis.com aiplatform.googleapis.com \
-  places.googleapis.com routes.googleapis.com calendar-json.googleapis.com \
+  secretmanager.googleapis.com aiplatform.googleapis.com apikeys.googleapis.com \
+  places.googleapis.com routes.googleapis.com maps-backend.googleapis.com calendar-json.googleapis.com \
   --project "$PROJECT_ID"
 
 if ! gcloud artifacts repositories describe "$REPOSITORY" --location "$REGION" --project "$PROJECT_ID" >/dev/null 2>&1; then

@@ -303,7 +303,7 @@ git fetch origin --prune
 
 ```bash
 gcloud projects create michikusa-hackathon-20260712 --name=MICHIKUSA
-BILLING_ACCOUNT_ID="$(gcloud billing accounts list --filter='open=true' --limit=1 --format='value(name.basename())')"
+BILLING_ACCOUNT_ID="$(gcloud billing accounts list --filter='open:true' --format='value(name)' | head -1)"
 gcloud billing projects link michikusa-hackathon-20260712 --billing-account="$BILLING_ACCOUNT_ID"
 ```
 

@@ -54,13 +54,31 @@ npm audit --omit=dev --audit-level=high
 
 ## 本番検証
 
-Cloud Runデプロイ後に、公開URL、revision、live health、実plan source、再計画の結果を追記する。
+検証日時: 2026-07-12 14:53 JST
+
+| 項目 | 結果 |
+|---|---|
+| Public Web | `https://michikusa-web-ap2prbrn6q-an.a.run.app` |
+| Web revision | `michikusa-web-00003-5j4`、100% traffic |
+| Agent revision | `michikusa-agent-00002-zdh`、非公開、100% traffic |
+| Health | HTTP 200、database/planning `ok` |
+| Agent runtime | `demo_mode=false`, ADK 2.4.0 |
+| Provider | `maps_live=true`, `gemini_live=true` |
+| Live plan | 実在3地点、61 events、36 traces、`source=live` |
+| Calendar | OAuth未設定のため `demo=true`、UIは未接続を明示 |
+| Replan | 3地点を再計画、return guard通過 |
+| Browser | Google Map描画、fallback mapなし、`LIVE DATA`表示 |
+| API key | Browser keyはMaps JavaScript APIとCloud Run 2 originへ制限 |
+
+本番スモーク:
+
+```bash
+SMOKE_BASE_URL="https://michikusa-web-ap2prbrn6q-an.a.run.app" \
+  REQUIRE_LIVE=true npm run test:smoke
+```
+
+Maps JavaScript APIの非同期ローダー推奨とlegacy Marker非推奨のwarningは残るが、console errorとfailed requestは発生していない。
 
 ## 実認証が必要なため別途確認する項目
 
-- Cloud Runへの実配置
-- Agent Platform上のGemini応答
-- Places APIの実候補
-- Routes APIの実経路
 - Google OAuthと実Calendar書き込み
-- Tursoクラウドへの実保存
