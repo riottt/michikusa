@@ -33,6 +33,7 @@ import {
   WalletCards,
   X
 } from "lucide-react";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { MapCanvas, type MapCandidate } from "@/components/map-canvas";
@@ -176,6 +177,24 @@ function RouteBadge({ onClick, active }: { onClick: () => void; active: boolean 
     >
       <Sparkles size={16} />
     </button>
+  );
+}
+
+function MichiMascot() {
+  return (
+    <div className="michi-mascot" data-testid="michi-mascot" aria-hidden="true">
+      <span className="michi-mascot__halo" />
+      <span className="michi-mascot__trail michi-mascot__trail--one" />
+      <span className="michi-mascot__trail michi-mascot__trail--two" />
+      <Image
+        className="michi-mascot__image"
+        src="/assets/michikusa-mascot-v1.png"
+        alt=""
+        width={512}
+        height={512}
+        unoptimized
+      />
+    </div>
   );
 }
 
@@ -534,11 +553,7 @@ export function MichikusaApp() {
 
       {phase === "planning" && (
         <section className="agent-working" aria-live="polite">
-          <div className="agent-orb">
-            <span className="agent-orb__core"><Compass size={23} /></span>
-            <span className="agent-orb__ring agent-orb__ring--one" />
-            <span className="agent-orb__ring agent-orb__ring--two" />
-          </div>
+          <MichiMascot />
           <div>
             <small>ルートを考えています</small>
             <strong>{latestTrace?.label ?? "いまの予定を見ています"}</strong>

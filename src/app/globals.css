@@ -517,21 +517,43 @@
   .agent-working strong { display: block; margin-top: 4px; font-size: 14px; line-height: 1.35; }
   .agent-working p { overflow: hidden; margin: 3px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
 
-  .agent-orb { position: relative; flex: 0 0 56px; width: 56px; height: 56px; }
-  .agent-orb__core {
+  .michi-mascot {
+    position: relative;
+    flex: 0 0 66px;
+    width: 66px;
+    height: 66px;
+    isolation: isolate;
+  }
+  .michi-mascot__halo {
+    position: absolute;
+    z-index: -1;
+    inset: 7px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,.96) 0 32%, rgba(222,212,255,.48) 54%, rgba(255,206,222,.08) 72%, transparent 74%);
+    animation: michiHalo 1.45s ease-out infinite;
+  }
+  .michi-mascot__image {
     position: absolute;
     z-index: 2;
-    inset: 8px;
-    display: grid;
-    place-items: center;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #ffb5ca, #aa94ff);
-    box-shadow: 0 9px 20px rgba(169,146,255,.28), inset 0 1px 1px rgba(255,255,255,.8);
-    color: #fff;
-    animation: orbFloat 1.8s ease-in-out infinite;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 9px 9px rgba(121,92,156,.19));
+    transform-origin: 50% 88%;
+    animation: michiWalk 1.15s var(--ease) infinite;
   }
-  .agent-orb__ring { position: absolute; inset: 1px; border: 1px solid rgba(169,146,255,.3); border-radius: 50%; animation: orbRing 2s ease-out infinite; }
-  .agent-orb__ring--two { animation-delay: 1s; border-color: rgba(255,134,172,.3); }
+  .michi-mascot__trail {
+    position: absolute;
+    z-index: -1;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    opacity: 0;
+    animation: michiTrail 1.15s ease-out infinite;
+  }
+  .michi-mascot__trail--one { bottom: 10px; left: 5px; background: rgba(255,134,172,.58); }
+  .michi-mascot__trail--two { bottom: 16px; left: 0; width: 7px; height: 7px; background: rgba(99,207,164,.66); animation-delay: .54s; }
 
   .ready-head { display: flex; align-items: flex-start; gap: 12px; }
   .ready-head > div:first-child { flex: 1; min-width: 0; }
@@ -978,8 +1000,9 @@
 @keyframes routeDraw { from { stroke-dashoffset: 60; opacity: .15; } to { stroke-dashoffset: 0; opacity: 1; } }
 @keyframes scanBloom { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.25); } 32% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.3); } }
 @keyframes scannerRing { 0% { opacity: .8; transform: translate(-50%, -50%) scale(.25); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(8); } }
-@keyframes orbFloat { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-3px) rotate(3deg); } }
-@keyframes orbRing { 0% { opacity: .7; transform: scale(.55); } 100% { opacity: 0; transform: scale(1.3); } }
+@keyframes michiWalk { 0%,100% { transform: translate(0, 2px) rotate(-4deg) scale(.97, 1.03); } 28% { transform: translate(1px, -4px) rotate(3deg) scale(1.03, .97); } 52% { transform: translate(3px, 1px) rotate(5deg) scale(.98, 1.02); } 76% { transform: translate(0, -3px) rotate(-2deg) scale(1.02, .98); } }
+@keyframes michiHalo { 0% { opacity: .72; transform: scale(.72); } 72%,100% { opacity: 0; transform: scale(1.18); } }
+@keyframes michiTrail { 0% { opacity: 0; transform: translate(0, 0) scale(.3); } 32% { opacity: .9; } 100% { opacity: 0; transform: translate(-16px, 4px) scale(1.2); } }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) {

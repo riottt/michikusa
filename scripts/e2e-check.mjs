@@ -82,6 +82,12 @@ await shot("01-home");
 
 const start = page.getByRole("button", { name: /外に連れ出して|このまま道草する|今日を動かす|道草をつくる/ }).first();
 await start.click();
+const mascot = page.getByTestId("michi-mascot");
+await mascot.waitFor({ state: "visible", timeout: 8_000 });
+const mascotMotion = await mascot.locator("img").evaluate((image) => getComputedStyle(image).animationName);
+if (!mascotMotion.includes("michiWalk")) {
+  throw new Error(`Mascot walk animation is not active: ${mascotMotion}`);
+}
 await page.waitForTimeout(350);
 await shot("02-agent-planning");
 
