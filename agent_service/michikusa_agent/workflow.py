@@ -4,7 +4,7 @@ import json
 import math
 import uuid
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
 from google.adk import Agent, Workflow
@@ -58,6 +58,14 @@ DEFAULT_STAY_MINUTES: dict[str, int] = {
     "station": 10,
     "viewpoint": 14,
 }
+
+
+def _plan_source(*, maps_live: bool, gemini_live: bool) -> Literal["live", "demo", "fallback"]:
+    if maps_live and gemini_live:
+        return "live"
+    if maps_live or gemini_live:
+        return "fallback"
+    return "demo"
 
 DISCOVER_CATEGORIES = {
     "book_store",
@@ -714,7 +722,10 @@ async def finalizer_agent(
         calendar_events=[CalendarEventDraft.model_validate(item) for item in calendar_events],
         safety=safety_report,
         share=share,
-        source="live" if settings.live_gemini_enabled or settings.live_maps_enabled else "demo",
+        source=_plan_source(
+            maps_live=settings.live_maps_enabled,
+            gemini_live=settings.live_gemini_enabled,
+        ),
     )
     ctx.state["final_plan"] = plan.model_dump(mode="json")
     return plan.model_dump(mode="json")
