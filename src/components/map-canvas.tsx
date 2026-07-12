@@ -54,7 +54,7 @@ function DemoMap({
   const polyline = route.map((point) => `${point.x},${point.y}`).join(" ");
 
   return (
-    <div className="demo-map" aria-label="MICHIKUSAデモ地図">
+    <div className="demo-map" aria-label="現在地とルートの地図">
       <svg className="demo-map__svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
         <defs>
           <linearGradient id="mapFade" x1="0" x2="1" y1="0" y2="1">

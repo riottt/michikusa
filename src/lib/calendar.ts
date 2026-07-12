@@ -160,7 +160,7 @@ export async function getCalendarStatus(sessionId: string): Promise<CalendarStat
       demo: true,
       calendarId: "demo-michikusa-calendar",
       scopes: [],
-      message: "デモ連携。OAuth設定後はGoogleカレンダーへ実登録します"
+      message: "カレンダーをつなぐと予定に合わせて提案します"
     };
   }
   const connection = await getCalendarConnection(sessionId);
@@ -168,7 +168,7 @@ export async function getCalendarStatus(sessionId: string): Promise<CalendarStat
     return {
       connected: false,
       demo: false,
-      message: "Googleカレンダーは未接続です"
+      message: "カレンダーは未接続です"
     };
   }
   return {
@@ -176,7 +176,7 @@ export async function getCalendarStatus(sessionId: string): Promise<CalendarStat
     demo: false,
     calendarId: connection.calendarId,
     scopes: connection.scope?.split(" ") ?? [],
-    message: "Googleカレンダー接続済み"
+    message: "カレンダー接続済み"
   };
 }
 
@@ -192,7 +192,7 @@ export async function fetchCalendarAvailability(
         {
           start: demoStart.toISOString(),
           end: new Date(demoStart.getTime() + 60 * 60 * 1000).toISOString(),
-          summary: "次の予定（デモ）"
+          summary: "次の予定"
         }
       ],
       source: "demo",

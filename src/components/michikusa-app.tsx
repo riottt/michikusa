@@ -5,7 +5,6 @@ import {
   ArrowRight,
   Bike,
   BookOpen,
-  BrainCircuit,
   CalendarCheck2,
   CalendarDays,
   Camera,
@@ -166,12 +165,16 @@ function SheetShell({ title, onClose, children }: { title: string; onClose: () =
   );
 }
 
-function AgentBadge({ count, onClick, active }: { count: number; onClick: () => void; active: boolean }) {
+function RouteBadge({ onClick, active }: { onClick: () => void; active: boolean }) {
   return (
-    <button className={`agent-badge ${active ? "agent-badge--active" : ""}`} type="button" onClick={onClick}>
-      <BrainCircuit size={15} />
-      <span>ADK</span>
-      <strong>{count || 18}</strong>
+    <button
+      className={`agent-badge ${active ? "agent-badge--active" : ""}`}
+      type="button"
+      onClick={onClick}
+      aria-label="ルートの理由を見る"
+      title="ルートの理由を見る"
+    >
+      <Sparkles size={16} />
     </button>
   );
 }
@@ -180,7 +183,7 @@ export function MichikusaApp() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [sheet, setSheet] = useState<Sheet>("none");
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
-  const [calendar, setCalendar] = useState<CalendarStatus>({ connected: false, demo: true, message: "Calendarを確認中" });
+  const [calendar, setCalendar] = useState<CalendarStatus>({ connected: false, demo: true, message: "カレンダーを確認中" });
   const [location, setLocation] = useState<GeoPoint>(DEMO_LOCATION);
   const [locationMode, setLocationMode] = useState<"loading" | "live" | "demo">("demo");
   const [contextHint, setContextHint] = useState<ContextHint>("home");
@@ -272,7 +275,7 @@ export function MichikusaApp() {
           setPins(event.plan.stops);
           setPhase("ready");
         } else if (event.type === "error") {
-          throw new Error(event.message || "エージェントが停止しました");
+          throw new Error(event.message || "ルートを作れませんでした");
         }
       }
     }
@@ -334,11 +337,11 @@ export function MichikusaApp() {
       if (response.ok) {
         const result = (await response.json()) as CalendarCommitResult;
         setCalendarCommit(result);
-        setToast(result.demo ? "予定をデモCalendarへ置きました" : "Googleカレンダーへ予定を登録しました");
+        setToast(result.demo ? "予定を記録しました" : "カレンダーに予定を追加しました");
       } else if (response.status === 409) {
-        setToast("Calendar未接続。ルートはそのまま開始できます");
+        setToast("カレンダー未接続。ルートはそのまま開始できます");
       } else {
-        setToast("Calendar登録を省略して開始します");
+        setToast("カレンダーへの追加を省略して開始します");
       }
       await fetch("/api/plans/status", {
         method: "POST",
@@ -346,7 +349,7 @@ export function MichikusaApp() {
         body: JSON.stringify({ planId: plan.id, status: "active" })
       });
     } catch {
-      setToast("Calendar登録を省略して開始します");
+      setToast("カレンダーへの追加を省略して開始します");
     }
   }
 
@@ -513,7 +516,7 @@ export function MichikusaApp() {
           <span className="brand-dot" />
         </div>
         <div className="header-actions">
-          {phase !== "idle" && <AgentBadge count={traces.length} active={phase === "planning"} onClick={() => setSheet("trace")} />}
+          {phase !== "idle" && <RouteBadge active={phase === "planning"} onClick={() => setSheet("trace")} />}
           <div className="luck-pill" aria-label={`${profile.luckTotal + earnedLuck} LUCK`}>
             <Sparkles size={14} />
             <strong>{profile.luckTotal + earnedLuck}</strong>
@@ -526,8 +529,7 @@ export function MichikusaApp() {
 
       <div className="location-chip">
         <span className={`location-chip__dot location-chip__dot--${locationMode}`} />
-        <span>{location.label ?? "現在地"}</span>
-        {locationMode === "demo" && <small>DEMO</small>}
+        <span>{locationMode === "demo" ? "仮の出発地点" : location.label ?? "現在地"}</span>
       </div>
 
       {phase === "planning" && (
@@ -538,8 +540,8 @@ export function MichikusaApp() {
             <span className="agent-orb__ring agent-orb__ring--two" />
           </div>
           <div>
-            <small>AGENT IS MOVING</small>
-            <strong>{latestTrace?.label ?? "今いる場所を見ています"}</strong>
+            <small>ルートを考えています</small>
+            <strong>{latestTrace?.label ?? "いまの予定を見ています"}</strong>
             <p>{latestTrace?.message ?? "時間と場所を並行して調べています。"}</p>
           </div>
         </section>
@@ -548,7 +550,7 @@ export function MichikusaApp() {
       {phase === "idle" && (
         <section className="bottom-panel bottom-panel--idle">
           <div className="idle-copy">
-            <span className="eyebrow"><Sparkles size={14} /> AI OUTING AGENT</span>
+            <span className="eyebrow"><Sparkles size={14} /> きょうの寄り道</span>
             <h1>{idleHeadline}</h1>
             <p>現在地と空き時間から、行き先・過ごし方・帰る時間まで決めます。</p>
           </div>
@@ -565,7 +567,7 @@ export function MichikusaApp() {
           </button>
           <button className="calendar-line" type="button" onClick={() => setSheet("menu")}>
             <CalendarDays size={16} />
-            <span>{calendar.connected ? "次の予定までをCalendarから確認" : calendar.demo ? "Calendar連携はデモで確認できます" : "Calendarをつなぐと空き時間も任せられます"}</span>
+            <span>{calendar.connected ? "次の予定までの時間を確認" : "カレンダーをつなぐと予定に合わせて提案"}</span>
             <ChevronRight size={16} />
           </button>
           {error && <p className="inline-error"><AlertCircle size={15} />{error}</p>}
@@ -602,7 +604,7 @@ export function MichikusaApp() {
           </button>
           <div className="ready-foot">
             <button type="button" onClick={createPlan}>作り直す</button>
-            <button type="button" onClick={() => setSheet("trace")}>エージェントの判断を見る</button>
+            <button type="button" onClick={() => setSheet("trace")}>このルートの理由</button>
           </div>
         </section>
       )}
@@ -672,7 +674,7 @@ export function MichikusaApp() {
             </button>
           )}
           {currentSpot.activity.completion_type === "timer" && timerRemaining != null && timerRemaining > 0 && (
-            <div className="mini-timer"><LoaderCircle size={22} /><strong>00:{String(timerRemaining).padStart(2, "0")}</strong><small>デモタイマー</small></div>
+            <div className="mini-timer"><LoaderCircle size={22} /><strong>00:{String(timerRemaining).padStart(2, "0")}</strong><small>タイマー</small></div>
           )}
           {currentSpot.activity.completion_type === "timer" && timerRemaining === 0 && (
             <button className="primary-action" type="button" onClick={completeSpot}><Check size={20} /><span>できた</span><Sparkles size={19} /></button>
@@ -788,25 +790,25 @@ export function MichikusaApp() {
       {sheet === "menu" && (
         <SheetShell title="MICHIKUSA" onClose={() => setSheet("none")}>
           <div className="menu-list">
-            <button type="button" onClick={() => setSheet("trace")}><span className="menu-icon menu-icon--purple"><BrainCircuit size={19} /></span><div><strong>エージェント</strong><small>ADKの調査と判断を見る</small></div><ChevronRight size={18} /></button>
+            <button type="button" onClick={() => setSheet("trace")}><span className="menu-icon menu-icon--purple"><Sparkles size={19} /></span><div><strong>ルートの理由</strong><small>どうしてこの順番なのかを見る</small></div><ChevronRight size={18} /></button>
             <button type="button" onClick={openMemories}><span className="menu-icon menu-icon--pink"><History size={19} /></span><div><strong>道草の記録</strong><small>これまでのルートを見る</small></div><ChevronRight size={18} /></button>
-            <button type="button" onClick={() => window.location.assign("/api/calendar/connect")}><span className="menu-icon menu-icon--green"><CalendarCheck2 size={19} /></span><div><strong>Googleカレンダー</strong><small>{calendar.message}</small></div><ChevronRight size={18} /></button>
+            <button type="button" onClick={() => window.location.assign("/api/calendar/connect")}><span className="menu-icon menu-icon--green"><CalendarCheck2 size={19} /></span><div><strong>カレンダー</strong><small>{calendar.message}</small></div><ChevronRight size={18} /></button>
             <button type="button" onClick={() => setSheet("settings")}><span className="menu-icon menu-icon--orange"><Settings2 size={19} /></span><div><strong>条件を変える</strong><small>時間・予算・移動手段</small></div><ChevronRight size={18} /></button>
           </div>
-          <p className="privacy-note">正確な自宅位置は共有カードへ載せません。Calendarへの登録は「この道草で出発」を押した後だけ行います。</p>
+          <p className="privacy-note">正確な自宅位置は共有カードへ載せません。カレンダーへの登録は「この道草で出発」を押した後だけ行います。</p>
           <p className="legal-links"><a href="/privacy">プライバシーポリシー</a><span>・</span><a href="/terms">利用規約</a></p>
         </SheetShell>
       )}
 
       {sheet === "trace" && (
-        <SheetShell title="エージェントの動き" onClose={() => setSheet("none")}>
-          <div className="trace-intro"><BrainCircuit size={22} /><div><strong>Google ADK · 18 workflow nodes</strong><p>再計画7ノード、Calendar実行4ノードも別ワークフローで動きます。</p></div></div>
+        <SheetShell title="ルートの理由" onClose={() => setSheet("none")}>
+          <div className="trace-intro"><Compass size={22} /><div><strong>寄り道を、無理なくつなげました</strong><p>時間・場所・帰る時間をまとめて確認しています。</p></div></div>
           <div className="trace-list">
             {(traces.length ? traces : [
               { agent: "situation_agent", label: "状況を読む", message: "家か外か、移動範囲を判定します。", status: "done", color: "pink" },
-              { agent: "parallel_scouts", label: "並行して調べる", message: "Calendar、場所、移動、履歴を同時に確認します。", status: "done", color: "purple" },
+              { agent: "parallel_scouts", label: "並行して調べる", message: "予定、場所、移動、履歴を同時に確認します。", status: "done", color: "purple" },
               { agent: "route_scout", label: "道をつなぐ", message: "帰る余白まで含めてルートを作ります。", status: "done", color: "green" },
-              { agent: "action_agent", label: "現実へ反映する", message: "地図、Calendar、記録へ渡します。", status: "done", color: "orange" }
+              { agent: "action_agent", label: "出発の準備", message: "地図、カレンダー、記録へ反映する準備をします。", status: "done", color: "orange" }
             ] as AgentTraceEvent[]).map((trace, index) => (
               <div key={`${trace.agent}-${index}`} className={`trace-item trace-item--${trace.color}`}>
                 <span>{index + 1}</span>

@@ -4,9 +4,9 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MICHIKUSA — AI外出エージェント",
+  title: "MICHIKUSA — ちょっと寄り道の案内",
   description:
-    "行きたい場所がない日に、現在地と空き時間からAIが道草ルートと過ごし方を決めるスマホ対応Webアプリ。",
+    "行きたい場所がない日に、現在地と空き時間から寄り道のルートと過ごし方を提案するアプリ。",
   applicationName: "MICHIKUSA",
   manifest: "/manifest.webmanifest",
   icons: {

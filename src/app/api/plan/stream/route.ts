@@ -67,11 +67,11 @@ export async function POST(request: NextRequest): Promise<Response> {
     });
   } catch (error) {
     console.error("Agent connection failed", { errorType: error instanceof Error ? error.name : "unknown" });
-    return Response.json({ error: "エージェントへ接続できませんでした。" }, { status: 503 });
+    return Response.json({ error: "ルートを作れませんでした。" }, { status: 503 });
   }
   if (!upstream.ok || !upstream.body) {
     console.error("Agent response failed", { status: upstream.status });
-    return Response.json({ error: "エージェントが一時的に利用できません。" }, { status: 502 });
+    return Response.json({ error: "ルートを作れませんでした。" }, { status: 502 });
   }
 
   const encoder = new TextEncoder();

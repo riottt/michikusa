@@ -46,6 +46,17 @@ async function visibleText(text, timeout = 30_000) {
 await page.goto(base, { waitUntil: "networkidle" });
 await visibleText("MICHIKUSA");
 
+const technicalLabels = ["ADK", "DEMO", "デモ", "AI OUTING AGENT", "AGENT IS MOVING", "Google ADK", "Calendar", "Google Routes"];
+async function assertProductCopy() {
+  const copy = await page.locator("body").innerText();
+  for (const technicalLabel of technicalLabels) {
+    if (copy.includes(technicalLabel)) {
+      throw new Error(`Technical label leaked into the product UI: ${technicalLabel}`);
+    }
+  }
+}
+await assertProductCopy();
+
 if (desktop) {
   const desktopLayout = await page.evaluate(() => {
     const shell = document.querySelector(".app-shell");
@@ -75,6 +86,7 @@ await page.waitForTimeout(350);
 await shot("02-agent-planning");
 
 await visibleText("この道草で出発", 45_000);
+await assertProductCopy();
 await shot("03-route-ready");
 
 await page.getByRole("button", { name: /この道草で出発/ }).click();

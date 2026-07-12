@@ -49,7 +49,7 @@ async def commit_calendar(request: CalendarCommitRequest) -> CalendarCommitRespo
         ids = [f"demo-event-{index + 1}" for index, _ in enumerate(request.plan.calendar_events)]
         return CalendarCommitResponse(
             calendar_id=calendar_id,
-            calendar_summary="MICHIKUSA（デモ）",
+            calendar_summary="MICHIKUSA",
             event_ids=ids,
             html_links=[],
             created=len(ids),

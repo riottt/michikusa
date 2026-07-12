@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "MICHIKUSA — AI外出エージェント",
+    name: "MICHIKUSA — ちょっと寄り道の案内",
     short_name: "MICHIKUSA",
-    description: "行きたい場所がない日に、AIが現在地から道草ルートを作ります。",
+    description: "行きたい場所がない日に、現在地から寄り道のルートを提案します。",
     start_url: "/",
     display: "standalone",
     background_color: "#fcfbfa",
