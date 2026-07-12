@@ -67,6 +67,7 @@ async function assertFallbackMapCanMove() {
   await page.mouse.down();
   await page.mouse.move(dragStart.x + 72, dragStart.y + 36, { steps: 4 });
   await page.mouse.up();
+  await page.waitForTimeout(50);
   const after = await mapContent.evaluate((node) => getComputedStyle(node).transform);
 
   if (before === after) {
@@ -76,7 +77,7 @@ async function assertFallbackMapCanMove() {
 
 await assertFallbackMapCanMove();
 
-const technicalLabels = ["ADK", "DEMO", "デモ", "AI OUTING AGENT", "AGENT IS MOVING", "Google ADK", "Calendar", "Google Routes"];
+const technicalLabels = ["ADK", "AI OUTING AGENT", "AGENT IS MOVING", "Google ADK", "Calendar", "Google Routes"];
 async function assertProductCopy() {
   const copy = await page.locator("body").innerText();
   for (const technicalLabel of technicalLabels) {
@@ -124,6 +125,8 @@ await shot("02-agent-planning");
 
 await visibleText("この道草で出発", 45_000);
 await visibleText("おまたせ！きょうの予定、立てたよ。");
+await visibleText("DEMO DATA");
+await visibleText("安全確認");
 const resultMascotMotion = await page.getByTestId("michi-mascot").locator("img").evaluate((image) => getComputedStyle(image).animationName);
 if (!resultMascotMotion.includes("michiCelebrate")) {
   throw new Error(`Mascot celebration animation is not active: ${resultMascotMotion}`);
@@ -133,15 +136,17 @@ await shot("03-route-ready");
 
 await page.getByRole("button", { name: /この道草で出発/ }).click();
 await visibleText("着いた", 20_000);
+await visibleText("カレンダーは未接続です");
 await shot("04-navigation");
 
 // Exercise the seven-node replan workflow once before completing the route.
-const replanMenu = page.locator(".active-topline button").first();
+const replanMenu = page.getByRole("button", { name: "予定変更・再計画" });
 if (await replanMenu.isVisible()) {
   await replanMenu.click();
   await visibleText("15分遅れている");
   await page.getByRole("button", { name: /15分遅れている/ }).click();
   await visibleText("着いた", 30_000);
+  await visibleText("15分の遅れに合わせて再計画");
   await shot("05-replanned");
 }
 
