@@ -43,6 +43,7 @@ export interface PlanRequestPayload {
     category?: string | null;
     completed_at?: string | null;
   }>;
+  force_demo?: boolean;
 }
 
 export interface ActivitySuggestion {

@@ -3,7 +3,8 @@ import { NextRequest } from "next/server";
 import { fetchAgent } from "@/lib/agent-client";
 import { fetchCalendarAvailability } from "@/lib/calendar";
 import { listRecentPlans, savePlan } from "@/lib/plans";
-import { allowCostlyRequest } from "@/lib/rate-limit";
+import { costlyRequestMode } from "@/lib/rate-limit";
+import { readBoundedJson } from "@/lib/request-json";
 import { getOrCreateSessionId } from "@/lib/session";
 import { planStartSchema } from "@/lib/validation";
 import type { MichikusaPlan, PlanRequestPayload } from "@/types/michikusa";
@@ -12,14 +13,16 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest): Promise<Response> {
-  const sessionId = await getOrCreateSessionId();
-  if (!allowCostlyRequest("plan", sessionId, request.headers)) {
-    return Response.json({ error: "少し時間を置いてから、もう一度試してください。" }, { status: 429 });
-  }
-
-  const parsed = planStartSchema.safeParse(await request.json());
+  const json = await readBoundedJson(request);
+  if (!json.ok) return json.response;
+  const parsed = planStartSchema.safeParse(json.value);
   if (!parsed.success) {
     return Response.json({ error: "入力内容を確認できませんでした。", details: parsed.error.flatten() }, { status: 400 });
+  }
+  const sessionId = await getOrCreateSessionId();
+  const costMode = await costlyRequestMode("plan", sessionId, request.headers);
+  if (costMode === "blocked") {
+    return Response.json({ error: "少し時間を置いてから、もう一度試してください。" }, { status: 429 });
   }
 
   const now = new Date(parsed.data.now ?? new Date().toISOString());
@@ -55,7 +58,8 @@ export async function POST(request: NextRequest): Promise<Response> {
         category: stop.category,
         completed_at: plan.end_at
       }))
-    )
+    ),
+    force_demo: costMode === "demo"
   };
 
   let upstream: Response;

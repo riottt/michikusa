@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { fetchAgent } from "@/lib/agent-client";
 import { savePlan } from "@/lib/plans";
-import { allowCostlyRequest } from "@/lib/rate-limit";
+import { costlyRequestMode } from "@/lib/rate-limit";
+import { readBoundedJson } from "@/lib/request-json";
 import { getOrCreateSessionId } from "@/lib/session";
 import { replanSchema } from "@/lib/validation";
 import type { MichikusaPlan } from "@/types/michikusa";
@@ -10,12 +11,14 @@ import type { MichikusaPlan } from "@/types/michikusa";
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  const json = await readBoundedJson(request);
+  if (!json.ok) return json.response;
+  const parsed = replanSchema.safeParse(json.value);
+  if (!parsed.success) return NextResponse.json({ error: "再計画の入力が不正です。" }, { status: 400 });
   const sessionId = await getOrCreateSessionId();
-  if (!allowCostlyRequest("replan", sessionId, request.headers)) {
+  if (await costlyRequestMode("replan", sessionId, request.headers) !== "live") {
     return NextResponse.json({ error: "少し時間を置いてから、もう一度試してください。" }, { status: 429 });
   }
-  const parsed = replanSchema.safeParse(await request.json());
-  if (!parsed.success) return NextResponse.json({ error: "再計画の入力が不正です。" }, { status: 400 });
   const response = await fetchAgent("/v1/replan", {
     method: "POST",
     body: JSON.stringify({

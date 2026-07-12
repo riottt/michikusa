@@ -8,7 +8,8 @@ export async function savePlan(sessionId: string, plan: MichikusaPlan): Promise<
   await getDb().execute({
     sql: `INSERT INTO plans(id, session_id, plan_json, status)
           VALUES (?, ?, ?, 'planned')
-          ON CONFLICT(id) DO UPDATE SET plan_json = excluded.plan_json, updated_at = CURRENT_TIMESTAMP`,
+          ON CONFLICT(id) DO UPDATE SET plan_json = excluded.plan_json, updated_at = CURRENT_TIMESTAMP
+          WHERE plans.session_id = excluded.session_id`,
     args: [plan.id, sessionId, JSON.stringify(plan)]
   });
 }

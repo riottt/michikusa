@@ -15,11 +15,13 @@
     "state": ".codex/harness/schemas/state.schema.json"
   },
   "verification_commands": {
+    "test:cost": { "executable": "npm", "args": ["run", "test:cost"] },
     "test:harness": { "executable": "npm", "args": ["run", "test:harness"] },
     "test:agent": { "executable": "npm", "args": ["run", "test:agent"] },
     "lint": { "executable": "npm", "args": ["run", "lint"] },
     "typecheck": { "executable": "npm", "args": ["run", "typecheck"] },
-    "build": { "executable": "npm", "args": ["run", "build"] }
+    "build": { "executable": "npm", "args": ["run", "build"] },
+    "verify": { "executable": "npm", "args": ["run", "verify"] }
   },
   "output_contract": ["status", "summary", "next_actions", "artifacts"]
 }

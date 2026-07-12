@@ -5,7 +5,8 @@ import { fetchAgent } from "@/lib/agent-client";
 import { getCalendarStatus, getValidCalendarConnection, setCalendarId } from "@/lib/calendar";
 import { isCalendarOAuthConfigured } from "@/lib/env";
 import { updatePlanStatus } from "@/lib/plans";
-import { allowCostlyRequest } from "@/lib/rate-limit";
+import { costlyRequestMode } from "@/lib/rate-limit";
+import { readBoundedJson } from "@/lib/request-json";
 import { getOrCreateSessionId } from "@/lib/session";
 import type { CalendarCommitResult, MichikusaPlan } from "@/types/michikusa";
 
@@ -17,12 +18,14 @@ const bodySchema = z.object({
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  const json = await readBoundedJson(request);
+  if (!json.ok) return json.response;
+  const parsed = bodySchema.safeParse(json.value);
+  if (!parsed.success) return NextResponse.json({ error: "予定を読み取れませんでした。" }, { status: 400 });
   const sessionId = await getOrCreateSessionId();
-  if (!allowCostlyRequest("calendar", sessionId, request.headers)) {
+  if (await costlyRequestMode("calendar", sessionId, request.headers) !== "live") {
     return NextResponse.json({ error: "少し時間を置いてから、もう一度試してください。" }, { status: 429 });
   }
-  const parsed = bodySchema.safeParse(await request.json());
-  if (!parsed.success) return NextResponse.json({ error: "予定を読み取れませんでした。" }, { status: 400 });
   const plan = parsed.data.plan as unknown as MichikusaPlan;
   const status = await getCalendarStatus(sessionId);
   const connection = isCalendarOAuthConfigured()

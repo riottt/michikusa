@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 from google.adk import Agent, Workflow
 from google.adk.agents.context import Context
 from google.adk.workflow import JoinNode, node
+from google.genai import types
 
 from .config import Settings, get_settings
 from .models import (
@@ -244,7 +245,9 @@ async def place_scout_agent(
         radius = 7000
     else:
         radius = 7500 if duration >= 120 else 4800
-    candidates = await search_places(plan_request.location, radius, 20)
+    candidates = await search_places(
+        plan_request.location, radius, 20, force_demo=plan_request.force_demo
+    )
     filtered = [
         candidate
         for candidate in candidates
@@ -448,7 +451,10 @@ async def route_composer_agent(
 
 
 async def route_geometry_agent(ctx: Context, route_draft: RouteDraft) -> dict[str, Any]:
-    distance, duration, encoded, points, source = await compute_route_geometry(route_draft)
+    plan_request = _as_plan_request(ctx.state["request"])
+    distance, duration, encoded, points, source = await compute_route_geometry(
+        route_draft, force_demo=plan_request.force_demo
+    )
     route_draft.estimated_distance_m = max(distance, route_draft.estimated_distance_m)
     route_draft.encoded_polyline = encoded
     route_draft.route_points = points
@@ -941,6 +947,12 @@ def _creative_agent(settings: Settings, force_demo: bool) -> Agent:
         output_schema=CreativeOutput,
         output_key="creative_output",
         mode="single_turn",
+        timeout=30,
+        generate_content_config=types.GenerateContentConfig(
+            max_output_tokens=512,
+            candidate_count=1,
+            temperature=0.4,
+        ),
     )
 
 
@@ -962,6 +974,12 @@ def _memory_agent(settings: Settings, force_demo: bool) -> Agent:
         output_schema=MemoryNarration,
         output_key="memory_output",
         mode="single_turn",
+        timeout=20,
+        generate_content_config=types.GenerateContentConfig(
+            max_output_tokens=256,
+            candidate_count=1,
+            temperature=0.5,
+        ),
     )
 
 

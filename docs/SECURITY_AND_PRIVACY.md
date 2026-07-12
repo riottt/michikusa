@@ -142,6 +142,16 @@ Agent:
 
 本番ではContent Security Policyも追加候補です。Google Mapsのscript、画像、接続先を含めた許可リストを作ります。
 
+## 課金APIの多層ガード
+
+公開環境では、セッション/IPの短時間制限に加えて、Tursoの`costly_request_counters`で全体10分枠とAsia/Tokyo日次枠を原子的に確保します。既定のlive plan枠は10分10回・1日40回です。Cloud Runのcold startや再デプロイでもカウンタは失われません。
+
+日次枠または永続ストア障害時のplanは、Gemini・Places・Routesを呼ばない明示的なdemo/fallbackへ降格します。replanとCalendarの枠超過は429で拒否します。Geminiの2ノードは単一候補、512/256 output token、30/20秒timeoutです。
+
+クラウド側では、両Cloud Run serviceをmin 0、service/revision max 1にし、Agent concurrencyを2にします。Maps JavaScript map loadsは500/日、Places SearchNearbyとRoutes ComputeRoutesは各100/日を上限目安にします。月額500 JPYのproject専用Budget Alertは通知であり、自動停止装置ではありません。
+
+緊急停止は、対象APIのquotaを0へ下げるか、Agentの`DEMO_MODE=true`で再デプロイします。復旧時はquota metricとunitをreadbackしてから元の値へ戻します。
+
 ## 残る課題
 
 - OAuth公開時のGoogle検証
