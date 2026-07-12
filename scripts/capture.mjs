@@ -1,0 +1,12 @@
+import { chromium } from "playwright-core";
+import { mkdir } from "node:fs/promises";
+import process from "node:process";
+const base = process.env.PREVIEW_URL || "http://127.0.0.1:3000";
+const executablePath = process.env.CHROMIUM_PATH || "/usr/bin/chromium";
+await mkdir("artifacts", { recursive: true });
+const browser = await chromium.launch({ headless: true, executablePath, args: ["--no-sandbox"] });
+const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+await page.goto(base, { waitUntil: "networkidle" });
+await page.screenshot({ path: "artifacts/michikusa-home.png", fullPage: true });
+await browser.close();
+console.log("Saved artifacts/michikusa-home.png");

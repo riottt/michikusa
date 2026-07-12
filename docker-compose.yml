@@ -1,0 +1,37 @@
+services:
+  agent:
+    build:
+      context: .
+      dockerfile: agent_service/Dockerfile
+    environment:
+      PORT: "8080"
+      DEMO_MODE: "true"
+      AGENT_SHARED_SECRET: "local-development-only"
+    ports:
+      - "8081:8080"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ""
+        NEXT_PUBLIC_GOOGLE_MAP_ID: "DEMO_MAP_ID"
+    environment:
+      PORT: "8080"
+      DEMO_MODE: "true"
+      NEXT_PUBLIC_DEMO_MODE: "true"
+      NEXT_PUBLIC_APP_URL: "http://localhost:3000"
+      AGENT_SERVICE_URL: "http://agent:8080"
+      AGENT_SHARED_SECRET: "local-development-only"
+      TURSO_DATABASE_URL: "file:data/michikusa.db"
+      TOKEN_ENCRYPTION_KEY: "local-docker-encryption-key-change-me"
+    depends_on:
+      - agent
+    ports:
+      - "3000:8080"
+    volumes:
+      - michikusa-data:/app/data
+
+volumes:
+  michikusa-data:

@@ -1,0 +1,39 @@
+# dependencies and builds
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# local data
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# The agent's bundled demo place catalog is source code, not local runtime data.
+!agent_service/michikusa_agent/data/
+!agent_service/michikusa_agent/data/**
+agent_service/michikusa_agent/data/__pycache__/
+
+# secrets
+.env
+.env.local
+.env.production
+.env.*.local
+agent_service/.env
+
+# logs and OS
+*.log
+.DS_Store
+Thumbs.db
+
+# generated previews
+artifacts/

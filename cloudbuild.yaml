@@ -1,0 +1,44 @@
+substitutions:
+  _REGION: asia-northeast1
+  _REPOSITORY: michikusa
+  _TAG: latest
+  _NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ""
+  _NEXT_PUBLIC_GOOGLE_MAP_ID: DEMO_MAP_ID
+steps:
+  - id: build-agent
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - agent_service/Dockerfile
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/michikusa-agent:${_TAG}
+      - .
+  - id: build-web
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - Dockerfile.web
+      - --build-arg
+      - NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${_NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+      - --build-arg
+      - NEXT_PUBLIC_GOOGLE_MAP_ID=${_NEXT_PUBLIC_GOOGLE_MAP_ID}
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/michikusa-web:${_TAG}
+      - .
+  - id: push-agent
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/michikusa-agent:${_TAG}"
+  - id: push-web
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/michikusa-web:${_TAG}"
+images:
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/michikusa-agent:${_TAG}
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/michikusa-web:${_TAG}
+options:
+  logging: CLOUD_LOGGING_ONLY

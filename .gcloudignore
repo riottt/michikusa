@@ -1,0 +1,9 @@
+.gcloudignore
+.git
+.gitignore
+#!include:.gitignore
+
+# The generic .gitignore excludes data/ artifacts.  The agent's bundled demo
+# place catalog is application code and must be present in the Cloud Run image.
+!agent_service/michikusa_agent/data/
+!agent_service/michikusa_agent/data/**

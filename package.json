@@ -1,0 +1,49 @@
+{
+  "name": "michikusa",
+  "version": "0.2.0",
+  "private": true,
+  "description": "MICHIKUSA — an AI outing agent that turns blank time into a spontaneous route, powered by Google ADK, Gemini, Maps, Calendar, Turso, and Cloud Run.",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "next dev -p 3000",
+    "dev:agent": "node scripts/run-agent.mjs --reload",
+    "build": "next build",
+    "start": "node scripts/start.mjs",
+    "start:agent": "node scripts/run-agent.mjs",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test:agent": "node scripts/test-agent.mjs",
+    "test:smoke": "node scripts/smoke-test.mjs",
+    "verify": "npm run lint && npm run typecheck && npm run test:agent && npm run build",
+    "db:migrate": "node scripts/migrate.mjs",
+    "preview:screenshot": "node scripts/capture.mjs",
+    "start:standalone": "node scripts/start.mjs",
+    "test:e2e": "node scripts/e2e-check.mjs"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.17.3",
+    "html-to-image": "^1.11.13",
+    "lucide-react": "^0.468.0",
+    "next": "16.2.10",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/google.maps": "^3.58.1",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "16.2.10",
+    "playwright-core": "^1.51.0",
+    "typescript": "^5.9.0"
+  },
+  "overrides": {
+    "postcss": "8.5.16"
+  }
+}

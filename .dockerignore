@@ -1,0 +1,15 @@
+node_modules
+.next
+.venv
+.git
+.env*
+data
+artifacts
+*.log
+agent_service/__pycache__
+agent_service/.pytest_cache
+
+# The demo place catalog is application source, not local runtime data.
+!agent_service/michikusa_agent/data/
+!agent_service/michikusa_agent/data/**
+agent_service/michikusa_agent/data/__pycache__/
