@@ -63,6 +63,9 @@ if (!plan.safety?.passed) throw new Error("Safety report did not pass");
 if (process.env.REQUIRE_LIVE === "true" && plan.source !== "live") {
   throw new Error(`Expected live plan, got ${plan.source}`);
 }
+if (process.env.REQUIRE_LIVE === "true" && !plan.encoded_polyline) {
+  throw new Error("Live plan is missing Routes API encoded geometry");
+}
 console.log(`Plan: ${plan.title} / ${plan.stops.length} spots / +${plan.luck_total} LUCK`);
 console.log(`Agent stream: ${lines.length} events / ${lines.filter((item) => item.type === "trace").length} traces`);
 
@@ -93,4 +96,7 @@ const replan = await request("/api/replan", {
 if (!replan.ok) throw new Error(`Replan failed: ${replan.status} ${await replan.text()}`);
 const replanned = await replan.json();
 if (new Date(replanned.end_at) > new Date(replanned.return_by)) throw new Error("Replan exceeded return guard");
+if (process.env.REQUIRE_LIVE === "true" && replanned.stops?.length > 0 && !replanned.encoded_polyline) {
+  throw new Error("Live replan is missing refreshed Routes API geometry");
+}
 console.log(`Replan: ${replanned.title} / ${replanned.stops.length} remaining spots / return guard OK`);

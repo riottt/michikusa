@@ -156,16 +156,25 @@ async def search_places(
     return places[:max_results]
 
 
-async def compute_route_geometry(
-    route: RouteDraft, *, force_demo: bool = False
+def route_travel_mode(transport_summary: str) -> str:
+    return "BICYCLE" if transport_summary == "自転車" else "WALK"
+
+
+async def compute_route_for_points(
+    points: list[GeoPoint],
+    transport_summary: str,
+    *,
+    fallback_distance_m: int = 0,
+    force_demo: bool = False,
 ) -> tuple[int, int, str | None, list[GeoPoint], str]:
     settings = get_settings()
-    points = [route.origin, *[stop.place.location for stop in route.stops]]
+    travel_mode = route_travel_mode(transport_summary)
     if force_demo or not settings.live_maps_enabled or len(points) < 2:
         distance = 0
         for start, end in zip(points, points[1:]):
             distance += int(haversine_m(start, end) * 1.16)
-        duration = max(1, int(distance / 72))
+        speed = 190 if travel_mode == "BICYCLE" else 72
+        duration = max(1, int(distance / speed))
         await asyncio.sleep(0.10)
         return distance, duration, None, points, "estimated"
 
@@ -180,11 +189,15 @@ async def compute_route_geometry(
         "destination": {
             "location": {"latLng": {"latitude": destination.lat, "longitude": destination.lng}}
         },
-        "travelMode": "WALK",
+        "travelMode": travel_mode,
         "computeAlternativeRoutes": False,
+        "polylineQuality": "HIGH_QUALITY",
+        "polylineEncoding": "ENCODED_POLYLINE",
         "languageCode": "ja-JP",
         "units": "METRIC",
     }
+    if travel_mode == "WALK":
+        body["routeModifiers"] = {"avoidIndoor": True}
     if intermediates:
         body["intermediates"] = intermediates
     headers = {
@@ -196,16 +209,30 @@ async def compute_route_geometry(
         response = await client.post(settings.routes_endpoint, headers=headers, json=body)
         response.raise_for_status()
         payload = response.json()
-    first = (payload.get("routes") or [{}])[0]
+    routes = payload.get("routes") or []
+    if not routes:
+        raise RuntimeError("Routes API returned no route")
+    first = routes[0]
     duration_value = str(first.get("duration") or "0s").removesuffix("s")
     try:
         duration_minutes = max(1, round(float(duration_value) / 60))
     except ValueError:
-        duration_minutes = route.estimated_distance_m // 72
+        duration_minutes = max(1, fallback_distance_m // (190 if travel_mode == "BICYCLE" else 72))
     return (
-        int(first.get("distanceMeters") or route.estimated_distance_m),
+        int(first.get("distanceMeters") or fallback_distance_m),
         duration_minutes,
         (first.get("polyline") or {}).get("encodedPolyline"),
         points,
         "google",
+    )
+
+
+async def compute_route_geometry(
+    route: RouteDraft, *, force_demo: bool = False
+) -> tuple[int, int, str | None, list[GeoPoint], str]:
+    return await compute_route_for_points(
+        [route.origin, *[stop.place.location for stop in route.stops]],
+        route.transport_summary,
+        fallback_distance_m=route.estimated_distance_m,
+        force_demo=force_demo,
     )

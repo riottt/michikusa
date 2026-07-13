@@ -86,6 +86,14 @@ Maps JavaScript APIの非同期ローダー推奨とlegacy Marker非推奨のwar
 - 本番readbackではCloud Runのservice/revision max=1、min=0、Agent concurrency<=2、Web SAだけのAgent invoker、cost guard環境変数名、Budget project filter、API quota、API key restrictionsを確認する。
 - Budget Alertは通知だけで支出を止めない。hard controlは永続live枠、Cloud Run max、Maps/Places/Routes quotaで行う。
 
+## Map and route fidelity
+
+- Google Mapsの標準basemapを使い、道路名、駅、地域名、POIを隠す独自styleは適用しない。
+- live planはRoutes APIの`HIGH_QUALITY` encoded polylineを返し、Webはそれを復号して道路沿いの座標列を描画する。`route_points`と単純なwaypoint列はprovider geometryがない場合だけ使う。
+- WALKは屋内経路を避ける設定を優先し、BICYCLEは自転車routeを要求する。alternative routeは要求せず、1 plan/replanあたりRoutes callは最大1回を維持する。
+- replanは古いencoded polylineを保持せず、残ったstop集合から再計算する。stopがない場合はgeometryを消す。
+- live browser確認では`.google-map[data-map-renderer="google"]`、`data-route-source="routes-api"`、`data-route-point-count > origin + stops`、標準地図label、console/network errorなしを確認する。
+
 ## 実認証が必要なため別途確認する項目
 
 - Google OAuthと実Calendar書き込み

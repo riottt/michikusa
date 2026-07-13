@@ -18,6 +18,7 @@ from michikusa_agent.runtime import MichikusaRuntime
 from michikusa_agent import server
 from michikusa_agent import workflow
 from michikusa_agent.config import Settings
+from michikusa_agent.services import maps
 
 
 def sample_request(context_hint: str = "outside") -> PlanRequest:
@@ -75,6 +76,111 @@ async def test_forced_demo_plan_does_not_call_live_maps(monkeypatch: pytest.Monk
     request = sample_request().model_copy(update={"force_demo": True})
     plan = await MichikusaRuntime().create_plan(request)
     assert plan.source in {"demo", "fallback"}
+
+
+@pytest.mark.asyncio
+async def test_routes_requests_ordered_high_quality_walking_and_bicycle_geometry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = Settings(
+        demo_mode=False,
+        maps_server_api_key="test-key",
+        gemini_model="gemini-test",
+        agent_shared_secret="test-secret",
+    )
+    monkeypatch.setattr(maps, "get_settings", lambda: settings)
+    requests: list[dict] = []
+
+    class Response:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {
+                "routes": [{
+                    "distanceMeters": 1840,
+                    "duration": "1260s",
+                    "polyline": {"encodedPolyline": "provider-road-geometry"},
+                }]
+            }
+
+    async def post(_client, url: str, *, headers: dict, json: dict) -> Response:
+        requests.append({"url": url, "headers": headers, "body": json})
+        return Response()
+
+    monkeypatch.setattr(maps.httpx.AsyncClient, "post", post)
+    points = [
+        GeoPoint(lat=34.70, lng=135.49),
+        GeoPoint(lat=34.71, lng=135.50),
+        GeoPoint(lat=34.72, lng=135.51),
+    ]
+
+    walking = await maps.compute_route_for_points(points, "徒歩＋電車")
+    bicycle = await maps.compute_route_for_points(points, "自転車")
+
+    assert walking[2] == "provider-road-geometry"
+    assert walking[4] == "google"
+    assert requests[0]["body"]["travelMode"] == "WALK"
+    assert requests[0]["body"]["polylineQuality"] == "HIGH_QUALITY"
+    assert requests[0]["body"]["polylineEncoding"] == "ENCODED_POLYLINE"
+    assert requests[0]["body"]["computeAlternativeRoutes"] is False
+    assert requests[0]["body"]["routeModifiers"] == {"avoidIndoor": True}
+    assert requests[0]["body"]["intermediates"][0]["location"]["latLng"] == {
+        "latitude": points[1].lat,
+        "longitude": points[1].lng,
+    }
+    assert requests[0]["headers"]["X-Goog-FieldMask"] == (
+        "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline"
+    )
+    assert bicycle[2] == "provider-road-geometry"
+    assert requests[1]["body"]["travelMode"] == "BICYCLE"
+    assert "routeModifiers" not in requests[1]["body"]
+
+
+@pytest.mark.asyncio
+async def test_replan_replaces_or_clears_stale_route_geometry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service = MichikusaRuntime()
+    original = await service.create_plan(sample_request())
+    original.source = "live"
+    original.encoded_polyline = "stale-route"
+    calls: list[list[GeoPoint]] = []
+
+    async def route(points, transport_summary, **_kwargs):
+        calls.append(points)
+        return 2200, 28, "fresh-route", points, "google"
+
+    monkeypatch.setattr(workflow, "compute_route_for_points", route)
+    changed = await service.replan(
+        ReplanRequest(
+            request_id="replan-fresh-geometry",
+            user_id="pytest-user",
+            now=original.start_at + timedelta(minutes=20),
+            plan=original,
+            current_stop_index=0,
+            reason=ReplanReason.DELAY,
+            delay_minutes=15,
+        )
+    )
+    assert changed.encoded_polyline == "fresh-route"
+    assert changed.distance_km == 2.2
+    assert len(calls) == 1
+
+    go_home = await service.replan(
+        ReplanRequest(
+            request_id="replan-clear-geometry",
+            user_id="pytest-user",
+            now=original.start_at + timedelta(minutes=20),
+            plan=original,
+            current_stop_index=0,
+            reason=ReplanReason.GO_HOME,
+            delay_minutes=0,
+        )
+    )
+    assert go_home.encoded_polyline is None
+    assert go_home.route_points == [go_home.origin]
+    assert len(calls) == 1
 
 
 @pytest.mark.asyncio
