@@ -41,7 +41,7 @@ from .models import (
 from .services.calendar import commit_calendar
 from .services.demo_llm import ACTIVITY_LIBRARY, DemoMichikusaModel
 from .services.geo import area_label, haversine_m, round_up_time, walking_minutes
-from .services.maps import compute_route_geometry, search_places
+from .services.maps import compute_route_for_points, compute_route_geometry, search_places
 
 DEFAULT_STAY_MINUTES: dict[str, int] = {
     "book_store": 24,
@@ -837,9 +837,29 @@ async def route_replanner_agent(
     plan.stops = [*completed, *remaining]
     plan.luck_total = sum(stop.activity.luck for stop in plan.stops)
     plan.duration_minutes = max(1, int((plan.end_at - plan.start_at).total_seconds() // 60))
-    plan.route_points = [plan.origin, *[stop.location for stop in plan.stops]]
+    direct_route_points = [plan.origin, *[stop.location for stop in plan.stops]]
+    plan.encoded_polyline = None
+    plan.route_points = direct_route_points
+    if len(direct_route_points) > 1:
+        try:
+            distance, _, encoded, route_points, _ = await compute_route_for_points(
+                direct_route_points,
+                plan.transport_summary,
+                fallback_distance_m=round(plan.distance_km * 1000),
+                force_demo=plan.source != "live",
+            )
+            plan.distance_km = round(distance / 1000, 1)
+            plan.encoded_polyline = encoded
+            plan.route_points = route_points
+        except Exception:
+            # Never retain stale provider geometry after the stop set changes.
+            plan.encoded_polyline = None
+            plan.route_points = direct_route_points
+    else:
+        plan.distance_km = 0
     plan.calendar_events = _calendar_events_for_plan(plan)
     plan.share.spots = len(plan.stops)
+    plan.share.distance_km = plan.distance_km
     plan.share.duration_minutes = plan.duration_minutes
     plan.share.luck = plan.luck_total
     ctx.state["final_plan"] = plan.model_dump(mode="json")

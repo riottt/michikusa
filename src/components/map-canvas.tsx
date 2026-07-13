@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { selectMapRoutePath, type MapRouteSource } from "@/lib/map-route";
 import type { GeoPoint, MichikusaPlan, PlanStop } from "@/types/michikusa";
 
 export interface MapCandidate {
@@ -128,6 +129,7 @@ function DemoMap({
       }}
     >
       <p id="map-gesture-hint" className="map-gesture-hint">ドラッグ、スクロール、矢印キーで地図を見回せます。</p>
+      <span className="map-renderer-badge map-renderer-badge--fallback">簡易地図</span>
       <div
         className="demo-map__content"
         data-testid="demo-map-content"
@@ -251,7 +253,7 @@ async function loadGoogleMaps(): Promise<typeof google | null> {
       resolve(window.google!);
     };
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&callback=${callback}&v=weekly&language=ja&region=JP`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&callback=${callback}&v=weekly&loading=async&language=ja&region=JP`;
     script.async = true;
     script.onerror = () => reject(new Error("Google Maps failed to load"));
     document.head.appendChild(script);
@@ -259,13 +261,14 @@ async function loadGoogleMaps(): Promise<typeof google | null> {
   return window.__michikusaMapsPromise;
 }
 
-function GoogleMapCanvas({ current, candidates, pins, currentSpotIndex, completedSpotIds }: MapCanvasProps) {
+function GoogleMapCanvas({ current, candidates, pins, plan, currentSpotIndex, completedSpotIds }: MapCanvasProps) {
   const node = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const overlays = useRef<Array<google.maps.MVCObject>>([]);
   const framedViewport = useRef<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [mapReady, setMapReady] = useState(false);
+  const [routeMeta, setRouteMeta] = useState<{ source: MapRouteSource; points: number }>({ source: "none", points: 0 });
 
   useEffect(() => {
     let mounted = true;
@@ -275,25 +278,18 @@ function GoogleMapCanvas({ current, candidates, pins, currentSpotIndex, complete
         mapRef.current = new g.maps.Map(node.current, {
           center: current,
           zoom: 14,
-          disableDefaultUI: true,
-          clickableIcons: false,
+          disableDefaultUI: false,
+          clickableIcons: true,
           gestureHandling: "greedy",
           draggable: true,
           scrollwheel: true,
           disableDoubleClickZoom: false,
           keyboardShortcuts: true,
+          zoomControl: true,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
           mapId: process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || undefined,
-          styles: process.env.NEXT_PUBLIC_GOOGLE_MAP_ID
-            ? undefined
-            : [
-                { elementType: "geometry", stylers: [{ color: "#fbfafb" }] },
-                { elementType: "labels.text.fill", stylers: [{ color: "#88858d" }] },
-                { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-                { featureType: "poi", stylers: [{ visibility: "off" }] },
-                { featureType: "road", elementType: "geometry", stylers: [{ color: "#ebe8ed" }] },
-                { featureType: "water", elementType: "geometry", stylers: [{ color: "#e0edf7" }] },
-                { featureType: "landscape.natural", stylers: [{ color: "#e8f4eb" }] }
-            ]
         });
         setMapReady(true);
       })
@@ -358,20 +354,30 @@ function GoogleMapCanvas({ current, candidates, pins, currentSpotIndex, complete
       bounds.extend(pin.location);
     });
 
+    const route = selectMapRoutePath({
+      encodedPolyline: plan?.encoded_polyline,
+      routePoints: plan?.route_points,
+      waypoints: [current, ...pins.map((pin) => pin.location)],
+    });
+    setRouteMeta({ source: route.source, points: route.points.length });
+    route.points.forEach((point) => bounds.extend(point));
+
     const viewportKey = JSON.stringify({
       current,
       candidates: candidates.map((candidate) => candidate.location),
-      pins: pins.map((pin) => pin.location)
+      pins: pins.map((pin) => pin.location),
+      encodedPolyline: plan?.encoded_polyline ?? null,
+      routeSource: route.source,
     });
 
-    if (pins.length) {
+    if (route.points.length > 1) {
       const line = new g.maps.Polyline({
         map,
-        path: [current, ...pins.map((pin) => pin.location)],
+        path: route.points,
         strokeColor: "#a992ff",
-        strokeOpacity: 0.9,
-        strokeWeight: 5,
-        geodesic: true
+        strokeOpacity: 0.96,
+        strokeWeight: 6,
+        geodesic: false
       });
       overlays.current.push(line);
       if (framedViewport.current !== viewportKey) {
@@ -382,10 +388,28 @@ function GoogleMapCanvas({ current, candidates, pins, currentSpotIndex, complete
       map.panTo(current);
       framedViewport.current = viewportKey;
     }
-  }, [mapReady, current, candidates, pins, currentSpotIndex, completedSpotIds]);
+  }, [mapReady, current, candidates, pins, plan, currentSpotIndex, completedSpotIds]);
 
   if (failed) return <DemoMap current={current} candidates={candidates} pins={pins} currentSpotIndex={currentSpotIndex} planning={false} completedSpotIds={completedSpotIds} />;
-  return <div ref={node} className="google-map" aria-label="Googleマップ" />;
+  const routeMode = plan?.transport_summary === "自転車" ? "自転車" : "徒歩";
+  const badge = !mapReady
+    ? "Google Maps 読み込み中"
+    : routeMeta.source === "routes-api"
+      ? `${routeMode}ルート・Google Maps`
+      : "Google Maps";
+  return (
+    <>
+      <div
+        ref={node}
+        className="google-map"
+        aria-label="Googleマップ"
+        data-map-renderer={mapReady ? "google" : "loading"}
+        data-route-source={routeMeta.source}
+        data-route-point-count={routeMeta.points}
+      />
+      <span className="map-renderer-badge">{badge}</span>
+    </>
+  );
 }
 
 export function MapCanvas(props: MapCanvasProps) {
