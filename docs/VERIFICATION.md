@@ -1,6 +1,6 @@
 # 検証記録
 
-検証日: 2026-07-12
+検証日: 2026-07-13
 
 ## 静的検査
 
@@ -54,35 +54,47 @@ npm audit --omit=dev --audit-level=high
 
 ## 本番検証
 
-検証日時: 2026-07-12 14:53 JST
+検証日時: 2026-07-13 JST
 
 | 項目 | 結果 |
 |---|---|
-| Public Web | `https://michikusa-web-ap2prbrn6q-an.a.run.app` |
-| Web revision | `michikusa-web-00003-5j4`、100% traffic |
-| Agent revision | `michikusa-agent-00002-zdh`、非公開、100% traffic |
-| Health | HTTP 200、database/planning `ok` |
+| Canonical Public Web | `https://michikusa-web-jfgzddrn7a-an.a.run.app`（ハッカソン提出URL） |
+| Deployed source | reviewed `origin/main` SHA `5948860` |
+| Web revision | `michikusa-web-00012-kqp`、100% traffic |
+| Agent revision | `michikusa-agent-00015-dc5`、非公開、100% traffic |
+| Health | Web/database/planning `ok`、Public Web HTTP 200 |
 | Agent runtime | `demo_mode=false`, ADK 2.4.0 |
 | Provider | `maps_live=true`, `gemini_live=true` |
-| Live plan | 実在3地点、61 events、36 traces、`source=live` |
-| Calendar | OAuth未設定のため `demo=true`、UIは未接続を明示 |
-| Replan | 3地点を再計画、return guard通過 |
-| Browser | Google Map描画、fallback mapなし、`LIVE DATA`表示 |
-| API key | Browser keyはMaps JavaScript APIとCloud Run 2 originへ制限 |
+| Live plan | `REQUIRE_LIVE=true`で`source=live`とRoutes encoded geometryまで通過 |
+| Calendar | 未接続sessionの期待されたHTTP 409と接続要求本文をsigned smokeで確認。成功パスは全`event_ids`を契約テストで維持 |
+| Replan | signed GREEN/FINALでRoutes geometry更新とreturn guard通過 |
+| Browser | duplicate key quarantine後のfresh sessionで`renderer=google`、`routeSource=routes-api`、`LIVE DATA`、fallbackなし |
+| Post-quarantine live smoke | health providers live、3 spots / 60 events / 36 traces、Calendar expected disconnected、replan 3 remaining・return guard通過 |
+| Access control | Public Web HTTP 200、未認証Agent HTTP 403 |
+| Scale | Web/Agentともservice・revisionのmin 0 / max 1 |
+| Harness | iteration 1のsigned live smoke成功後、iteration 2でsigned RED/GREEN `test:quarantine`とsigned FINAL `verify`を記録。GREENとFINALは成功 |
 
 本番スモーク:
 
 ```bash
-SMOKE_BASE_URL="https://michikusa-web-ap2prbrn6q-an.a.run.app" \
+SMOKE_BASE_URL="https://michikusa-web-jfgzddrn7a-an.a.run.app" \
   REQUIRE_LIVE=true npm run test:smoke
 ```
+
+初回GREENで判明したCalendar未接続409の判定を修正後、提出先でsigned GREENとFINAL、本番browser確認、cost/security readbackまで完了した。確認用に作成したtarget旧revision tagは削除し、一時credentialとdeployment worktreeも残していない。
+
+旧重複環境 `michikusa-hackathon-20260712` は削除せず、rollback可能な状態で公開停止した。Web revision `michikusa-web-00008-q49`とAgent revision `michikusa-agent-00004-4vv`はいずれも未認証HTTP 403で、public WebおよびWeb-to-Agentのinvoker bindingを除去済み。duplicate Agent service accountの`roles/aiplatform.user`を除去し、`aiplatform.googleapis.com`、`maps-backend.googleapis.com`、`places.googleapis.com`、`routes.googleapis.com`をdisabledにした。browser keyはMaps APIだけかつ`https://disabled.invalid/*`だけ、server keyはPlaces/Routesだけかつserver allowed IP `192.0.2.1/32`だけに制限した。
+
+ユーザー指定のno-delete方針に従い、両Cloud Run service/revisionはmin 0 / max 1で保持し、Secret Manager metadata、browser/server API key resource、container imageも削除していない。iteration 2のsigned RED `test:quarantine`は空IAM projectionの`null`を検出して非zeroとなり、collectorを安全に正規化した上でremediation後のsigned GREEN `test:quarantine`が成功した。signed FINAL `verify`も成功している。
 
 Maps JavaScript APIの非同期ローダー推奨とlegacy Marker非推奨のwarningは残るが、console errorとfailed requestは発生していない。
 
 ## Cost / security verification
 
 - `npm run test:cost`: LibSQLの原子的な全体10分・JST日次枠、上限更新、JSON Content-Type/64 KiB境界、Agentのprovider-free demo、Gemini生成上限を検証する。
-- `npm run verify`: lint、typecheck、harness、cost/agent tests、production buildをまとめて実行する。
+- `npm run test:quarantine`: project `michikusa-hackathon-20260712`・region `asia-northeast1`へ固定したread-only verifier。Vertex role、4つの課金API、sanitized key restriction、Cloud Run IAM/scale、公開HTTP 403を確認し、key stringやsecret値は取得・表示しない。
+- `npm run test:quarantine:contracts`: 正常なquarantine、reviewer指摘のhigh-risk状態、誤project/region、key/IAM/scale/HTTP違反、projected `null`の安全な正規化をpure testで検証する。
+- `npm run verify`: lint、typecheck、harness、smoke/quarantine contracts、cost/map/agent tests、security check、production buildをまとめて実行する。
 - 本番readbackではCloud Runのservice/revision max=1、min=0、Agent concurrency<=2、Web SAだけのAgent invoker、cost guard環境変数名、Budget project filter、API quota、API key restrictionsを確認する。
 - Budget Alertは通知だけで支出を止めない。hard controlは永続live枠、Cloud Run max、Maps/Places/Routes quotaで行う。
 

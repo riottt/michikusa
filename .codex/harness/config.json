@@ -17,6 +17,8 @@
   "verification_commands": {
     "test:cost": { "executable": "npm", "args": ["run", "test:cost"] },
     "test:map": { "executable": "npm", "args": ["run", "test:map"] },
+    "test:quarantine": { "executable": "npm", "args": ["run", "test:quarantine"] },
+    "test:smoke": { "executable": "npm", "args": ["run", "test:smoke"] },
     "test:harness": { "executable": "npm", "args": ["run", "test:harness"] },
     "test:agent": { "executable": "npm", "args": ["run", "test:agent"] },
     "lint": { "executable": "npm", "args": ["run", "lint"] },

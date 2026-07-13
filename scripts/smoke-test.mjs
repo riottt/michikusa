@@ -1,5 +1,7 @@
 import process from "node:process";
 
+import { validateCalendarCommitResponse } from "./smoke-contracts.mjs";
+
 const base = process.env.SMOKE_BASE_URL || "http://127.0.0.1:3000";
 let cookie = "";
 
@@ -74,12 +76,16 @@ const calendar = await request("/api/calendar/commit", {
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ plan })
 });
-if (!calendar.ok) throw new Error(`Calendar failed: ${calendar.status} ${await calendar.text()}`);
-const calendarBody = await calendar.json();
-if (calendarBody.event_ids?.length !== plan.calendar_events.length) {
-  throw new Error("Calendar event count mismatch");
+const calendarResult = await validateCalendarCommitResponse(calendar, {
+  expectedEventCount: plan.calendar_events.length,
+  requireLive: process.env.REQUIRE_LIVE === "true"
+});
+if (calendarResult.kind === "disconnected") {
+  console.log(`Calendar: disconnected (${calendarResult.body.error})`);
+} else {
+  const calendarBody = calendarResult.body;
+  console.log(`Calendar: ${calendarBody.created} created / demo=${calendarBody.demo}`);
 }
-console.log(`Calendar: ${calendarBody.created} created / demo=${calendarBody.demo}`);
 
 const replan = await request("/api/replan", {
   method: "POST",
