@@ -52,7 +52,7 @@
     "eslint-config-next": "16.2.10",
     "playwright-core": "^1.51.0",
     "smol-toml": "^1.7.0",
-    "typescript": "^5.9.0"
+    "typescript": "^7.0.2"
   },
   "overrides": {
     "postcss": "8.5.16"
